@@ -38,20 +38,194 @@ EPG_SOURCES = [
     "https://gitee.com/taksssss/tv/raw/main/epg/e3.xml.gz",
 ]
 
+# ═══════════════════════════════════════
+#  频道名归一化 —— 核心匹配逻辑
+# ═══════════════════════════════════════
+
+# 要剥离的后缀/噪声词
+_NOISE_WORDS = [
+    "高清", "超清", "标清", "蓝光", "原画",
+    "hd", "fhd", "uhd", "4k", "8k", "sd", "h265", "h264", "hevc", "avc",
+    "频道", "电视台", "卫视台", "tv",
+    "（主）", "（备）", "(主)", "(备)",
+    "ipv6", "ipv4",
+    "组播", "单播",
+]
+
+# 中文数字映射
+_CN_NUM = {
+    "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
+    "六": "6", "七": "7", "八": "8", "九": "9", "十": "10",
+    "零": "0", "〇": "0",
+}
+
+# CCTV 别名表
+_CCTV_MAP = {
+    "cctv1":  "cctv1综合",      "cctv-1": "cctv1综合",
+    "cctv2":  "cctv2财经",      "cctv-2": "cctv2财经",
+    "cctv3":  "cctv3综艺",      "cctv-3": "cctv3综艺",
+    "cctv4":  "cctv4中文国际",   "cctv-4": "cctv4中文国际",
+    "cctv5":  "cctv5体育",      "cctv-5": "cctv5体育",
+    "cctv5+": "cctv5+体育赛事", "cctv-5+": "cctv5+体育赛事",
+    "cctv5＋": "cctv5+体育赛事",
+    "cctv6":  "cctv6电影",      "cctv-6": "cctv6电影",
+    "cctv7":  "cctv7国防军事",   "cctv-7": "cctv7国防军事",
+    "cctv8":  "cctv8电视剧",     "cctv-8": "cctv8电视剧",
+    "cctv9":  "cctv9纪录",      "cctv-9": "cctv9纪录",
+    "cctv10": "cctv10科教",     "cctv-10": "cctv10科教",
+    "cctv11": "cctv11戏曲",     "cctv-11": "cctv11戏曲",
+    "cctv12": "cctv12社会与法",  "cctv-12": "cctv12社会与法",
+    "cctv13": "cctv13新闻",     "cctv-13": "cctv13新闻",
+    "cctv14": "cctv14少儿",     "cctv-14": "cctv14少儿",
+    "cctv15": "cctv15音乐",     "cctv-15": "cctv15音乐",
+    "cctv16": "cctv16奥林匹克",  "cctv-16": "cctv16奥林匹克",
+    "cctv17": "cctv17农业农村",  "cctv-17": "cctv17农业农村",
+}
+
+
+def _normalize_name(raw: str) -> str:
+    """
+    把频道名归一化为纯小写、无空格、无后缀、无标点的最小形式。
+    用于模糊匹配比对。
+    """
+    n = raw.strip().lower()
+
+    # 全角→半角
+    n = n.replace("＋", "+").replace("－", "-").replace("（", "(").replace("）", ")")
+
+    # 中文数字→阿拉伯数字 (仅对 CCTV 后面的数字)
+    def _cn2num(m):
+        prefix = m.group(1)
+        cn = m.group(2)
+        return prefix + _CN_NUM.get(cn, cn)
+    n = re.sub(r'(cctv|cctv-)([一二三四五六七八九十])', _cn2num, n)
+
+    # 去噪声词
+    for w in _NOISE_WORDS:
+        n = n.replace(w, "")
+
+    # 去标点符号和空格
+    n = re.sub(r'[\s\-_.,:;，。：；、()\[\]【】《》"\'\"\/|\\#*！!？?@&]+', '', n)
+
+    return n.strip()
+
+
+def _build_index(alive_list, alias_map):
+    """
+    从存活频道列表构建三级索引:
+      exact_index:       原始名 -> {url, speed}
+      normalized_index:  归一化名 -> {url, speed}
+      keyword_index:     关键词 -> [{url, speed, name}]
+    """
+    exact_index = {}
+    normalized_index = {}
+    keyword_index = defaultdict(list)
+
+    for a in alive_list:
+        name = a["item"]["name"]
+        name = alias_map.get(name, name)
+        url = a["item"]["url"]
+        speed = a["speed"]
+
+        data = {"url": url, "speed": speed, "name": name}
+
+        # 精确索引
+        if name not in exact_index or speed < exact_index[name]["speed"]:
+            exact_index[name] = data
+
+        # 归一化索引
+        norm = _normalize_name(name)
+        if norm and (norm not in normalized_index or speed < normalized_index[norm]["speed"]):
+            normalized_index[norm] = data
+
+        # 关键词索引 —— 提取核心标识
+        # CCTV 系列: "cctv1", "cctv5+" 等
+        m = re.search(r'(cctv\d+\+?)', norm)
+        if m:
+            keyword_index[m.group(1)].append(data)
+
+        # 卫视系列: "湖南", "浙江", "江苏" 等
+        m = re.search(r'([\u4e00-\u9fff]{2,4})(卫视|tv)', norm)
+        if m:
+            keyword_index[m.group(1) + "卫视"].append(data)
+
+        # 省级频道: 提取省份名
+        provinces = ["北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
+                     "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
+                     "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
+                     "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海",
+                     "天津"]
+        for prov in provinces:
+            if prov in name:
+                keyword_index[prov].append(data)
+
+    return exact_index, normalized_index, keyword_index
+
+
+def _match_channel(demo_name, alias_map, exact_index, normalized_index, keyword_index):
+    """
+    多级匹配策略，返回 (url, match_type) 或 (None, None)
+    match_type: "exact" / "alias" / "normalized" / "keyword" / "fuzzy"
+    """
+    # 1) 精确匹配
+    if demo_name in exact_index:
+        return exact_index[demo_name]["url"], "exact"
+
+    # 2) 别名精确匹配
+    aliased = alias_map.get(demo_name)
+    if aliased and aliased in exact_index:
+        return exact_index[aliased]["url"], "alias"
+
+    # 3) 归一化匹配
+    norm = _normalize_name(demo_name)
+    if norm and norm in normalized_index:
+        return normalized_index[norm]["url"], "normalized"
+
+    # 4) 别名归一化匹配
+    if aliased:
+        norm_alias = _normalize_name(aliased)
+        if norm_alias and norm_alias in normalized_index:
+            return normalized_index[norm_alias]["url"], "alias+normalized"
+
+    # 5) 关键词匹配
+    #    CCTV 系列
+    m = re.search(r'(cctv\d+\+?)', norm)
+    if m:
+        kw = m.group(1)
+        if kw in keyword_index and keyword_index[kw]:
+            # 进一步缩小范围: 如果 demo 名含 "体育"，优先选含 "体育" 的
+            best = keyword_index[kw][0]
+            for item in keyword_index[kw]:
+                if item["speed"] < best["speed"]:
+                    best = item
+            return best["url"], "keyword"
+
+    # 6) 卫视/省份关键词
+    for prov in ["北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
+                 "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
+                 "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
+                 "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海",
+                 "天津"]:
+        if prov in demo_name:
+            kw = prov + "卫视" if "卫视" in demo_name else prov
+            if kw in keyword_index and keyword_index[kw]:
+                best = min(keyword_index[kw], key=lambda x: x["speed"])
+                return best["url"], "keyword"
+
+    # 7) 子串模糊匹配 (demo 名是某个存活频道名的子串，或反过来)
+    if len(norm) >= 2:
+        for bnorm, bdata in normalized_index.items():
+            if norm in bnorm or bnorm in norm:
+                return bdata["url"], "fuzzy"
+
+    return None, None
+
 
 def _session():
     s = requests.Session()
     s.headers.update(HEADERS)
     s.verify = False
     return s
-
-
-def _normalize(name):
-    """统一频道名用于模糊匹配：去空格、去高清/HD后缀、转小写"""
-    n = name.strip().lower()
-    n = re.sub(r'[\s\-_]+', '', n)
-    n = re.sub(r'(高清|hd|fhd|uhd|4k|标清|sd)', '', n)
-    return n
 
 
 class Engine:
@@ -175,54 +349,50 @@ class Engine:
         self.alive = alive
 
     # ═══════════════════════════════════════
-    #  阶段3: 分类（含模糊匹配）
+    #  阶段3: 分类（超级自动匹配）
     # ═══════════════════════════════════════
 
     def categorize(self):
         log.info("=" * 50)
-        log.info("阶段3: 分类 (demo.txt 驱动)")
+        log.info("阶段3: 分类 (demo.txt 驱动 + 自动匹配)")
         log.info("=" * 50)
 
         demo = self._load_demo()
         alias_map = self._load_alias()
 
+        # ─── 打印诊断信息 ───
+        if self.alive:
+            log.info("📊 存活频道样本 (前15个):")
+            for a in self.alive[:15]:
+                log.info("   %s → %s", a["item"]["name"], a["item"]["url"][:60])
+
+        if demo:
+            log.info("📋 demo.txt 样本 (前15个):")
+            for d in demo[:15]:
+                log.info("   [%s] %s", d["group"], d["name"])
+
+        # ─── 如果 demo.txt 为空，直接输出全部存活频道 ───
         if not demo:
             log.warning("⚠️ demo.txt 为空或不存在，将输出全部存活频道")
-            # fallback: 按原始分组输出所有存活频道
             result = []
-            current_group = ""
             for a in self.alive:
                 group = a["item"].get("group", "") or "未分类"
-                name = a["item"]["name"]
-                url = a["item"]["url"]
-                if group != current_group:
-                    current_group = group
-                result.append((group, name, url))
+                result.append((group, a["item"]["name"], a["item"]["url"]))
             self.classified = result
             log.info("Fallback 输出: %d 个频道", len(result))
             return
 
-        # 构建 best 字典（精确 + 归一化双索引）
-        best_exact = {}      # 精确名称 -> {url, speed}
-        best_normalized = {} # 归一化名称 -> {url, speed, original_name}
+        # ─── 构建三级索引 ───
+        exact_index, normalized_index, keyword_index = _build_index(self.alive, alias_map)
+        log.info("索引构建完成: 精确=%d, 归一化=%d, 关键词=%d",
+                 len(exact_index), len(normalized_index), len(keyword_index))
 
-        for a in self.alive:
-            name = a["item"]["name"]
-            name = alias_map.get(name, name)
-            norm = _normalize(name)
-
-            if name not in best_exact or a["speed"] < best_exact[name]["speed"]:
-                best_exact[name] = {"url": a["item"]["url"], "speed": a["speed"]}
-
-            if norm not in best_normalized or a["speed"] < best_normalized[norm]["speed"]:
-                best_normalized[norm] = {"url": a["item"]["url"], "speed": a["speed"], "original": name}
-
+        # ─── 逐条匹配 ───
         result = []
         current_group = ""
-        seen = set()
-        exact_hits = 0
-        fuzzy_hits = 0
-        misses = 0
+        seen_in_group = set()
+        stats = {"exact": 0, "alias": 0, "normalized": 0, "keyword": 0, "fuzzy": 0, "miss": 0}
+        misses = []
 
         for d in demo:
             name = d["name"]
@@ -230,56 +400,42 @@ class Engine:
 
             if group != current_group:
                 current_group = group
-                seen = set()
+                seen_in_group = set()
 
-            if name in seen:
+            if name in seen_in_group:
                 continue
-            seen.add(name)
+            seen_in_group.add(name)
 
-            # 1) 精确匹配
-            if name in best_exact:
-                result.append((group, name, best_exact[name]["url"]))
-                exact_hits += 1
-                continue
+            url, match_type = _match_channel(
+                name, alias_map, exact_index, normalized_index, keyword_index
+            )
 
-            # 2) 别名精确匹配
-            aliased = alias_map.get(name)
-            if aliased and aliased in best_exact:
-                result.append((group, name, best_exact[aliased]["url"]))
-                exact_hits += 1
-                continue
-
-            # 3) 归一化模糊匹配
-            norm = _normalize(name)
-            if norm in best_normalized:
-                result.append((group, name, best_normalized[norm]["url"]))
-                fuzzy_hits += 1
-                continue
-
-            # 4) 子串包含匹配（demo名是抓取名的子串，或反过来）
-            found = False
-            norm_no_suffix = re.sub(r'(综合|财经|综艺|中文国际|体育|电影|国防军事|电视剧|纪录|科教|戏曲|社会与法|新闻|少儿|音乐|农业农村|体育赛事|教育|英语|法语|俄语|阿拉伯语|西班牙语|documentary|entertainment|sports|movies|news|kids|music|drama)', '', norm)
-            if norm_no_suffix and len(norm_no_suffix) >= 2:
-                for bnorm, bdata in best_normalized.items():
-                    bnorm_clean = re.sub(r'(综合|财经|综艺|中文国际|体育|电影|国防军事|电视剧|纪录|科教|戏曲|社会与法|新闻|少儿|音乐|农业农村|体育赛事|教育|英语|法语|俄语|阿拉伯语|西班牙语|documentary|entertainment|sports|movies|news|kids|music|drama)', '', bnorm)
-                    if norm_no_suffix == bnorm_clean or norm_no_suffix in bnorm or bnorm in norm_no_suffix:
-                        result.append((group, name, bdata["url"]))
-                        fuzzy_hits += 1
-                        found = True
-                        break
-
-            if not found:
-                misses += 1
+            if url:
+                # 归一化统计
+                if "alias" in match_type:
+                    stats["alias"] += 1
+                elif match_type in stats:
+                    stats[match_type] += 1
+                result.append((group, name, url))
+            else:
+                stats["miss"] += 1
+                misses.append(name)
 
         self.classified = result
-        log.info("分类完成: %d 个频道 (精确:%d 模糊:%d 未匹配:%d)",
-                 len(result), exact_hits, fuzzy_hits, misses)
 
-        if misses > 0 and len(result) == 0:
-            log.warning("⚠️ 全部未匹配！请检查 config/demo.txt 的频道名是否与上游源一致")
-            log.warning("   前10个存活频道名示例:")
-            for a in self.alive[:10]:
-                log.warning("     - %s", a["item"]["name"])
+        log.info("═══ 匹配结果 ═══")
+        log.info("  ✅ 精确匹配: %d", stats["exact"])
+        log.info("  ✅ 别名匹配: %d", stats["alias"])
+        log.info("  ✅ 归一化匹配: %d", stats["normalized"])
+        log.info("  ✅ 关键词匹配: %d", stats["keyword"])
+        log.info("  ✅ 模糊匹配: %d", stats["fuzzy"])
+        log.info("  ❌ 未匹配: %d", stats["miss"])
+        log.info("  总计输出: %d 个频道", len(result))
+
+        if misses:
+            log.warning("未匹配的频道 (%d 个):", len(misses))
+            for m in misses[:20]:
+                log.warning("   - %s", m)
 
     # ═══════════════════════════════════════
     #  阶段4: 输出
@@ -456,8 +612,15 @@ class Engine:
                 group = line.split(",")[0].strip()
                 continue
             if "," in line:
-                name, url = line.split(",", 1)
-                entries.append({"name": name.strip(), "url": url.strip(), "group": group})
+                parts = line.split(",", 1)
+                name = parts[0].strip()
+                rest = parts[1].strip()
+                # demo.txt 可能只有频道名没有 URL
+                if rest and not rest.startswith("http") and rest != "":
+                    # 这不是 URL，可能是 demo 模板，只取频道名
+                    entries.append({"name": name, "url": "", "group": group})
+                else:
+                    entries.append({"name": name, "url": rest, "group": group})
         return entries
 
     def _load_rules(self):
@@ -539,10 +702,9 @@ class Engine:
             log.warning("config/demo.txt 不存在")
             return []
         with open(path, encoding="utf-8") as f:
-            entries = self._parse_txt(f.read())
+            content = f.read()
+        entries = self._parse_txt(content)
         log.info("demo.txt 加载: %d 个频道模板", len(entries))
-        if entries:
-            log.info("  前5个: %s", [e["name"] for e in entries[:5]])
         return entries
 
     def _load_alias(self):
