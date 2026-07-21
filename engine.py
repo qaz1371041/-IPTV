@@ -183,7 +183,7 @@ class Engine:
             name = a["item"]["name"]
             name = alias_map.get(name, name)
             if name not in best or a["speed"] < best[name]["speed"]:
-                best[name] = a["item"]["url"]
+                best[name] = {"url": a["item"]["url"], "speed": a["speed"]}
 
         result = []
         current_group = ""
@@ -202,7 +202,7 @@ class Engine:
             seen.add(name)
 
             if name in best:
-                result.append((group, name, best[name]))
+                result.append((group, name, best[name]["url"]))
 
         self.classified = result
         log.info("分类完成: %d 个频道", len(result))
