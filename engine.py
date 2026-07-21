@@ -46,6 +46,14 @@ def _session():
     return s
 
 
+def _normalize(name):
+    """统一频道名用于模糊匹配：去空格、去高清/HD后缀、转小写"""
+    n = name.strip().lower()
+    n = re.sub(r'[\s\-_]+', '', n)
+    n = re.sub(r'(高清|hd|fhd|uhd|4k|标清|sd)', '', n)
+    return n
+
+
 class Engine:
 
     def __init__(self):
@@ -167,7 +175,7 @@ class Engine:
         self.alive = alive
 
     # ═══════════════════════════════════════
-    #  阶段3: 分类
+    #  阶段3: 分类（含模糊匹配）
     # ═══════════════════════════════════════
 
     def categorize(self):
@@ -178,16 +186,43 @@ class Engine:
         demo = self._load_demo()
         alias_map = self._load_alias()
 
-        best = {}
+        if not demo:
+            log.warning("⚠️ demo.txt 为空或不存在，将输出全部存活频道")
+            # fallback: 按原始分组输出所有存活频道
+            result = []
+            current_group = ""
+            for a in self.alive:
+                group = a["item"].get("group", "") or "未分类"
+                name = a["item"]["name"]
+                url = a["item"]["url"]
+                if group != current_group:
+                    current_group = group
+                result.append((group, name, url))
+            self.classified = result
+            log.info("Fallback 输出: %d 个频道", len(result))
+            return
+
+        # 构建 best 字典（精确 + 归一化双索引）
+        best_exact = {}      # 精确名称 -> {url, speed}
+        best_normalized = {} # 归一化名称 -> {url, speed, original_name}
+
         for a in self.alive:
             name = a["item"]["name"]
             name = alias_map.get(name, name)
-            if name not in best or a["speed"] < best[name]["speed"]:
-                best[name] = {"url": a["item"]["url"], "speed": a["speed"]}
+            norm = _normalize(name)
+
+            if name not in best_exact or a["speed"] < best_exact[name]["speed"]:
+                best_exact[name] = {"url": a["item"]["url"], "speed": a["speed"]}
+
+            if norm not in best_normalized or a["speed"] < best_normalized[norm]["speed"]:
+                best_normalized[norm] = {"url": a["item"]["url"], "speed": a["speed"], "original": name}
 
         result = []
         current_group = ""
         seen = set()
+        exact_hits = 0
+        fuzzy_hits = 0
+        misses = 0
 
         for d in demo:
             name = d["name"]
@@ -201,11 +236,50 @@ class Engine:
                 continue
             seen.add(name)
 
-            if name in best:
-                result.append((group, name, best[name]["url"]))
+            # 1) 精确匹配
+            if name in best_exact:
+                result.append((group, name, best_exact[name]["url"]))
+                exact_hits += 1
+                continue
+
+            # 2) 别名精确匹配
+            aliased = alias_map.get(name)
+            if aliased and aliased in best_exact:
+                result.append((group, name, best_exact[aliased]["url"]))
+                exact_hits += 1
+                continue
+
+            # 3) 归一化模糊匹配
+            norm = _normalize(name)
+            if norm in best_normalized:
+                result.append((group, name, best_normalized[norm]["url"]))
+                fuzzy_hits += 1
+                continue
+
+            # 4) 子串包含匹配（demo名是抓取名的子串，或反过来）
+            found = False
+            norm_no_suffix = re.sub(r'(综合|财经|综艺|中文国际|体育|电影|国防军事|电视剧|纪录|科教|戏曲|社会与法|新闻|少儿|音乐|农业农村|体育赛事|教育|英语|法语|俄语|阿拉伯语|西班牙语|documentary|entertainment|sports|movies|news|kids|music|drama)', '', norm)
+            if norm_no_suffix and len(norm_no_suffix) >= 2:
+                for bnorm, bdata in best_normalized.items():
+                    bnorm_clean = re.sub(r'(综合|财经|综艺|中文国际|体育|电影|国防军事|电视剧|纪录|科教|戏曲|社会与法|新闻|少儿|音乐|农业农村|体育赛事|教育|英语|法语|俄语|阿拉伯语|西班牙语|documentary|entertainment|sports|movies|news|kids|music|drama)', '', bnorm)
+                    if norm_no_suffix == bnorm_clean or norm_no_suffix in bnorm or bnorm in norm_no_suffix:
+                        result.append((group, name, bdata["url"]))
+                        fuzzy_hits += 1
+                        found = True
+                        break
+
+            if not found:
+                misses += 1
 
         self.classified = result
-        log.info("分类完成: %d 个频道", len(result))
+        log.info("分类完成: %d 个频道 (精确:%d 模糊:%d 未匹配:%d)",
+                 len(result), exact_hits, fuzzy_hits, misses)
+
+        if misses > 0 and len(result) == 0:
+            log.warning("⚠️ 全部未匹配！请检查 config/demo.txt 的频道名是否与上游源一致")
+            log.warning("   前10个存活频道名示例:")
+            for a in self.alive[:10]:
+                log.warning("     - %s", a["item"]["name"])
 
     # ═══════════════════════════════════════
     #  阶段4: 输出
@@ -462,9 +536,14 @@ class Engine:
     def _load_demo(self):
         path = os.path.join(CONFIG, "demo.txt")
         if not os.path.exists(path):
+            log.warning("config/demo.txt 不存在")
             return []
         with open(path, encoding="utf-8") as f:
-            return self._parse_txt(f.read())
+            entries = self._parse_txt(f.read())
+        log.info("demo.txt 加载: %d 个频道模板", len(entries))
+        if entries:
+            log.info("  前5个: %s", [e["name"] for e in entries[:5]])
+        return entries
 
     def _load_alias(self):
         path = os.path.join(CONFIG, "alias.txt")
@@ -483,4 +562,5 @@ class Engine:
                         alt = alt.strip()
                         if alt:
                             alias_map[alt] = main_name
+        log.info("alias.txt 加载: %d 条别名映射", len(alias_map))
         return alias_map
