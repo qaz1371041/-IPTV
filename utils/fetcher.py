@@ -22,7 +22,7 @@ async def fetch_single(session, url):
         if line.startswith('#EXTINF:'):
             # 解析属性
             name = ''
-            if ',', in line:
+           if ',' in line:         # ✅ 正确
                 name = line.split(',')[-1].strip()
             tvg_name = re.search(r'tvg-name="([^"]*)"', line)
             tvg_logo = re.search(r'tvg-logo="([^"]*)"', line)
