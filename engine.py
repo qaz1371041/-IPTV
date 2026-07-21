@@ -1,27 +1,38 @@
-import os, re, io, gzip, json, time, logging, subprocess, shutil
+import os
+import re
+import io
+import gzip
+import json
+import time
+import logging
+import subprocess
+import shutil
 from collections import defaultdict
-from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
+
 import requests
 import urllib3
 
 urllib3.disable_warnings()
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
+# ==================== 全局配置 ====================
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(BASE, "config")
 OUTPUT = os.path.join(BASE, "output")
 
-TIMEOUT = 8
-MAX_WORKERS = 80
-MIN_HEIGHT = 720
-FFPROBE_TIMEOUT = 10
+TIMEOUT = 8          # 测速超时(秒)
+MAX_WORKERS = 80     # 并发线程数
+MIN_HEIGHT = 720     # 最低分辨率
+FFPROBE_TIMEOUT = 10 # ffprobe 超时(秒)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/126.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/126.0.0.0 Safari/537.36"
+    ),
     "Accept": "*/*",
     "Connection": "keep-alive",
 }
@@ -38,85 +49,42 @@ EPG_SOURCES = [
     "https://gitee.com/taksssss/tv/raw/main/epg/e3.xml.gz",
 ]
 
-# ═══════════════════════════════════════
-#  频道名归一化 —— 核心匹配逻辑
-# ═══════════════════════════════════════
-
-# 要剥离的后缀/噪声词
 _NOISE_WORDS = [
     "高清", "超清", "标清", "蓝光", "原画",
     "hd", "fhd", "uhd", "4k", "8k", "sd", "h265", "h264", "hevc", "avc",
     "频道", "电视台", "卫视台", "tv",
     "（主）", "（备）", "(主)", "(备)",
-    "ipv6", "ipv4",
-    "组播", "单播",
+    "ipv6", "ipv4", "组播", "单播",
 ]
 
-# 中文数字映射
 _CN_NUM = {
     "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
     "六": "6", "七": "7", "八": "8", "九": "9", "十": "10",
     "零": "0", "〇": "0",
 }
 
-# CCTV 别名表
-_CCTV_MAP = {
-    "cctv1":  "cctv1综合",      "cctv-1": "cctv1综合",
-    "cctv2":  "cctv2财经",      "cctv-2": "cctv2财经",
-    "cctv3":  "cctv3综艺",      "cctv-3": "cctv3综艺",
-    "cctv4":  "cctv4中文国际",   "cctv-4": "cctv4中文国际",
-    "cctv5":  "cctv5体育",      "cctv-5": "cctv5体育",
-    "cctv5+": "cctv5+体育赛事", "cctv-5+": "cctv5+体育赛事",
-    "cctv5＋": "cctv5+体育赛事",
-    "cctv6":  "cctv6电影",      "cctv-6": "cctv6电影",
-    "cctv7":  "cctv7国防军事",   "cctv-7": "cctv7国防军事",
-    "cctv8":  "cctv8电视剧",     "cctv-8": "cctv8电视剧",
-    "cctv9":  "cctv9纪录",      "cctv-9": "cctv9纪录",
-    "cctv10": "cctv10科教",     "cctv-10": "cctv10科教",
-    "cctv11": "cctv11戏曲",     "cctv-11": "cctv11戏曲",
-    "cctv12": "cctv12社会与法",  "cctv-12": "cctv12社会与法",
-    "cctv13": "cctv13新闻",     "cctv-13": "cctv13新闻",
-    "cctv14": "cctv14少儿",     "cctv-14": "cctv14少儿",
-    "cctv15": "cctv15音乐",     "cctv-15": "cctv15音乐",
-    "cctv16": "cctv16奥林匹克",  "cctv-16": "cctv16奥林匹克",
-    "cctv17": "cctv17农业农村",  "cctv-17": "cctv17农业农村",
-}
 
+# ==================== 工具函数 ====================
 
 def _normalize_name(raw: str) -> str:
-    """
-    把频道名归一化为纯小写、无空格、无后缀、无标点的最小形式。
-    用于模糊匹配比对。
-    """
+    """将频道名归一化，用于模糊匹配"""
     n = raw.strip().lower()
-
-    # 全角→半角
     n = n.replace("＋", "+").replace("－", "-").replace("（", "(").replace("）", ")")
 
-    # 中文数字→阿拉伯数字 (仅对 CCTV 后面的数字)
     def _cn2num(m):
-        prefix = m.group(1)
-        cn = m.group(2)
-        return prefix + _CN_NUM.get(cn, cn)
+        return m.group(1) + _CN_NUM.get(m.group(2), m.group(2))
+
     n = re.sub(r'(cctv|cctv-)([一二三四五六七八九十])', _cn2num, n)
 
-    # 去噪声词
     for w in _NOISE_WORDS:
         n = n.replace(w, "")
 
-    # 去标点符号和空格
     n = re.sub(r'[\s\-_.,:;，。：；、()\[\]【】《》"\'\"\/|\\#*！!？?@&]+', '', n)
-
     return n.strip()
 
 
 def _build_index(alive_list, alias_map):
-    """
-    从存活频道列表构建三级索引:
-      exact_index:       原始名 -> {url, speed}
-      normalized_index:  归一化名 -> {url, speed}
-      keyword_index:     关键词 -> [{url, speed, name}]
-    """
+    """构建多级匹配索引"""
     exact_index = {}
     normalized_index = {}
     keyword_index = defaultdict(list)
@@ -126,7 +94,6 @@ def _build_index(alive_list, alias_map):
         name = alias_map.get(name, name)
         url = a["item"]["url"]
         speed = a["speed"]
-
         data = {"url": url, "speed": speed, "name": name}
 
         # 精确索引
@@ -138,23 +105,21 @@ def _build_index(alive_list, alias_map):
         if norm and (norm not in normalized_index or speed < normalized_index[norm]["speed"]):
             normalized_index[norm] = data
 
-        # 关键词索引 —— 提取核心标识
-        # CCTV 系列: "cctv1", "cctv5+" 等
+        # 关键词索引
         m = re.search(r'(cctv\d+\+?)', norm)
         if m:
             keyword_index[m.group(1)].append(data)
 
-        # 卫视系列: "湖南", "浙江", "江苏" 等
         m = re.search(r'([\u4e00-\u9fff]{2,4})(卫视|tv)', norm)
         if m:
             keyword_index[m.group(1) + "卫视"].append(data)
 
-        # 省级频道: 提取省份名
-        provinces = ["北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
-                     "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
-                     "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
-                     "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海",
-                     "天津"]
+        provinces = [
+            "北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
+            "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
+            "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
+            "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海", "天津",
+        ]
         for prov in provinces:
             if prov in name:
                 keyword_index[prov].append(data)
@@ -163,56 +128,47 @@ def _build_index(alive_list, alias_map):
 
 
 def _match_channel(demo_name, alias_map, exact_index, normalized_index, keyword_index):
-    """
-    多级匹配策略，返回 (url, match_type) 或 (None, None)
-    match_type: "exact" / "alias" / "normalized" / "keyword" / "fuzzy"
-    """
-    # 1) 精确匹配
+    """7级匹配引擎"""
+    # Level 1: 精确匹配
     if demo_name in exact_index:
         return exact_index[demo_name]["url"], "exact"
 
-    # 2) 别名精确匹配
+    # Level 2: 别名精确匹配
     aliased = alias_map.get(demo_name)
     if aliased and aliased in exact_index:
         return exact_index[aliased]["url"], "alias"
 
-    # 3) 归一化匹配
+    # Level 3: 归一化匹配
     norm = _normalize_name(demo_name)
     if norm and norm in normalized_index:
         return normalized_index[norm]["url"], "normalized"
 
-    # 4) 别名归一化匹配
+    # Level 4: 别名归一化匹配
     if aliased:
         norm_alias = _normalize_name(aliased)
         if norm_alias and norm_alias in normalized_index:
             return normalized_index[norm_alias]["url"], "alias+normalized"
 
-    # 5) 关键词匹配
-    #    CCTV 系列
+    # Level 5: CCTV关键词匹配
     m = re.search(r'(cctv\d+\+?)', norm)
     if m:
         kw = m.group(1)
         if kw in keyword_index and keyword_index[kw]:
-            # 进一步缩小范围: 如果 demo 名含 "体育"，优先选含 "体育" 的
-            best = keyword_index[kw][0]
-            for item in keyword_index[kw]:
-                if item["speed"] < best["speed"]:
-                    best = item
+            best = min(keyword_index[kw], key=lambda x: x["speed"])
             return best["url"], "keyword"
 
-    # 6) 卫视/省份关键词
+    # Level 6: 省份/卫视关键词匹配
     for prov in ["北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
                  "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
                  "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
-                 "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海",
-                 "天津"]:
+                 "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海", "天津"]:
         if prov in demo_name:
             kw = prov + "卫视" if "卫视" in demo_name else prov
             if kw in keyword_index and keyword_index[kw]:
                 best = min(keyword_index[kw], key=lambda x: x["speed"])
                 return best["url"], "keyword"
 
-    # 7) 子串模糊匹配 (demo 名是某个存活频道名的子串，或反过来)
+    # Level 7: 模糊子串匹配
     if len(norm) >= 2:
         for bnorm, bdata in normalized_index.items():
             if norm in bnorm or bnorm in norm:
@@ -228,6 +184,8 @@ def _session():
     return s
 
 
+# ==================== 核心引擎 ====================
+
 class Engine:
 
     def __init__(self):
@@ -236,17 +194,13 @@ class Engine:
         self.classified = []
         self.dead_sources = []
 
-    # ═══════════════════════════════════════
-    #  阶段1: 抓取
-    # ═══════════════════════════════════════
-
+    # ---------- 阶段1: 抓取 ----------
     def fetch(self):
         log.info("=" * 50)
         log.info("阶段1: 抓取 + 死源屏蔽")
         log.info("=" * 50)
 
         alive_sources, self.dead_sources = self._load_sources()
-
         if not alive_sources:
             log.error("所有源均不可达！")
             return
@@ -281,10 +235,7 @@ class Engine:
         self.all_entries = unique
         log.info("去重后: %d", len(self.all_entries))
 
-    # ═══════════════════════════════════════
-    #  阶段2: 测速
-    # ═══════════════════════════════════════
-
+    # ---------- 阶段2: 测速 ----------
     def speedtest(self):
         if not self.all_entries:
             log.warning("无条目可测速")
@@ -315,6 +266,7 @@ class Engine:
 
         log.info("测速完成: 存活 %d / 死亡 %d", len(alive), dead_count)
 
+        # 分辨率探测
         if HAS_FFPROBE and alive:
             log.info("-" * 50)
             log.info("分辨率探测 (最低 %dp, 共 %d 个)", MIN_HEIGHT, len(alive))
@@ -341,17 +293,13 @@ class Engine:
             alive = [a for a in alive
                      if a["resolution"] is None or a["resolution"][1] >= MIN_HEIGHT]
             log.info("分辨率过滤后: 存活 %d / 淘汰 %d", len(alive), low_res)
-        else:
-            if not HAS_FFPROBE:
-                log.info("⚠️ ffprobe 未安装，跳过分辨率探测")
+        elif not HAS_FFPROBE:
+            log.info("⚠️ ffprobe 未安装，跳过分辨率探测")
 
         alive.sort(key=lambda x: x["speed"])
         self.alive = alive
 
-    # ═══════════════════════════════════════
-    #  阶段3: 分类（超级自动匹配）
-    # ═══════════════════════════════════════
-
+    # ---------- 阶段3: 分类 ----------
     def categorize(self):
         log.info("=" * 50)
         log.info("阶段3: 分类 (demo.txt 驱动 + 自动匹配)")
@@ -360,7 +308,6 @@ class Engine:
         demo = self._load_demo()
         alias_map = self._load_alias()
 
-        # ─── 打印诊断信息 ───
         if self.alive:
             log.info("📊 存活频道样本 (前15个):")
             for a in self.alive[:15]:
@@ -371,7 +318,7 @@ class Engine:
             for d in demo[:15]:
                 log.info("   [%s] %s", d["group"], d["name"])
 
-        # ─── 如果 demo.txt 为空，直接输出全部存活频道 ───
+        # ★ Fallback: demo为空时按原始分组输出
         if not demo:
             log.warning("⚠️ demo.txt 为空或不存在，将输出全部存活频道")
             result = []
@@ -382,12 +329,11 @@ class Engine:
             log.info("Fallback 输出: %d 个频道", len(result))
             return
 
-        # ─── 构建三级索引 ───
+        # 构建索引并匹配
         exact_index, normalized_index, keyword_index = _build_index(self.alive, alias_map)
         log.info("索引构建完成: 精确=%d, 归一化=%d, 关键词=%d",
                  len(exact_index), len(normalized_index), len(keyword_index))
 
-        # ─── 逐条匹配 ───
         result = []
         current_group = ""
         seen_in_group = set()
@@ -411,7 +357,6 @@ class Engine:
             )
 
             if url:
-                # 归一化统计
                 if "alias" in match_type:
                     stats["alias"] += 1
                 elif match_type in stats:
@@ -434,13 +379,10 @@ class Engine:
 
         if misses:
             log.warning("未匹配的频道 (%d 个):", len(misses))
-            for m in misses[:20]:
+            for m in misses[:30]:
                 log.warning("   - %s", m)
 
-    # ═══════════════════════════════════════
-    #  阶段4: 输出
-    # ═══════════════════════════════════════
-
+    # ---------- 阶段4: 输出 ----------
     def write_output(self):
         log.info("=" * 50)
         log.info("阶段4: 输出")
@@ -450,7 +392,6 @@ class Engine:
 
         txt_path = os.path.join(OUTPUT, "iptv.txt")
         m3u_path = os.path.join(OUTPUT, "iptv.m3u")
-
         count = 0
 
         with open(txt_path, "w", encoding="utf-8") as f:
@@ -471,10 +412,7 @@ class Engine:
         log.info("输出: %s (%d 个频道)", txt_path, count)
         log.info("输出: %s", m3u_path)
 
-    # ═══════════════════════════════════════
-    #  阶段5: EPG
-    # ═══════════════════════════════════════
-
+    # ---------- 阶段5: EPG ----------
     def process_epg(self):
         log.info("=" * 50)
         log.info("阶段5: EPG")
@@ -521,9 +459,7 @@ class Engine:
         total = sum(len(re.findall(r'<programme ', t)) for t in all_texts)
         log.info("EPG: %d 条 → %s", total, epg_path)
 
-    # ═══════════════════════════════════════
-    #  内部方法
-    # ═══════════════════════════════════════
+    # ==================== 内部方法 ====================
 
     def _check_source_alive(self, url, session):
         try:
@@ -602,6 +538,7 @@ class Engine:
         return entries
 
     def _parse_txt(self, text):
+        """解析直播源txt格式（仅用于sources，不用于demo）"""
         entries = []
         group = ""
         for line in text.strip().split("\n"):
@@ -612,15 +549,8 @@ class Engine:
                 group = line.split(",")[0].strip()
                 continue
             if "," in line:
-                parts = line.split(",", 1)
-                name = parts[0].strip()
-                rest = parts[1].strip()
-                # demo.txt 可能只有频道名没有 URL
-                if rest and not rest.startswith("http") and rest != "":
-                    # 这不是 URL，可能是 demo 模板，只取频道名
-                    entries.append({"name": name, "url": "", "group": group})
-                else:
-                    entries.append({"name": name, "url": rest, "group": group})
+                name, url = line.split(",", 1)
+                entries.append({"name": name.strip(), "url": url.strip(), "group": group})
         return entries
 
     def _load_rules(self):
@@ -696,15 +626,50 @@ class Engine:
         except Exception:
             return None
 
+    # =====================================================
+    # ★ 关键修复：专用 demo.txt 解析器
+    #   支持无逗号的纯频道名行（如 CCTV-1）
+    #   不再复用 _parse_txt，避免被静默丢弃
+    # =====================================================
     def _load_demo(self):
         path = os.path.join(CONFIG, "demo.txt")
         if not os.path.exists(path):
             log.warning("config/demo.txt 不存在")
             return []
+
+        entries = []
+        group = ""
+
         with open(path, encoding="utf-8") as f:
-            content = f.read()
-        entries = self._parse_txt(content)
+            for raw_line in f:
+                line = raw_line.strip()
+
+                # 跳过空行和注释
+                if not line or line.startswith("#"):
+                    continue
+
+                # 分组标记行
+                if ",#genre#" in line:
+                    group = line.split(",")[0].strip()
+                    continue
+
+                # ★ 核心修复：无论有没有逗号，都提取频道名
+                if "," in line:
+                    name = line.split(",", 1)[0].strip()
+                else:
+                    name = line.strip()
+
+                if name:
+                    entries.append({"name": name, "url": "", "group": group})
+
         log.info("demo.txt 加载: %d 个频道模板", len(entries))
+        if entries:
+            groups = list(dict.fromkeys(e["group"] for e in entries))
+            log.info("  分组(%d个): %s", len(groups), groups)
+            log.info("  前10个: %s", [(e["group"], e["name"]) for e in entries[:10]])
+        else:
+            log.warning("⚠️ demo.txt 解析结果为空！请检查文件格式")
+
         return entries
 
     def _load_alias(self):
