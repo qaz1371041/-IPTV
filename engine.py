@@ -1,682 +1,519 @@
-#!/usr/bin/env python3
-"""
-核心引擎 - 适配 alias.txt (主名,别名1,别名2,re:正则) + demo.txt 多分类复用
-"""
-import os, re, gzip, json, time, logging, subprocess
-from typing import List, Dict, Tuple, Set
-from collections import defaultdict, OrderedDict
+import os, re, io, gzip, json, time, logging, subprocess, shutil
+from collections import defaultdict
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
-from xml.etree import ElementTree as ET
-
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import urllib3
 
-logger = logging.getLogger(__name__)
+urllib3.disable_warnings()
+logging.getLogger("urllib3").setLevel(logging.ERROR)
 
-# ============ 路径 ============
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(BASE, "config")
 OUTPUT = os.path.join(BASE, "output")
 
-# ============ 常量 ============
-THREADS = 50
-TIMEOUT = 10
-MIN_MBPS = 2.0
-SAMPLE_PER_HOST = 3
-HOST_DEAD_RATIO = 0.8
-TS_SYNC = 0x47
-EPG_KEYWORDS = ["未提供节目表", "精彩节目", "暂无节目"]
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+TIMEOUT = 8
+MAX_WORKERS = 80
+MIN_HEIGHT = 720
+FFPROBE_TIMEOUT = 10
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/126.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Connection": "keep-alive",
+}
+
+log = logging.getLogger("iptv")
+HAS_FFPROBE = shutil.which("ffprobe") is not None
 
 
-# ============================================================
-#  工具
-# ============================================================
-def _session() -> requests.Session:
+def _session():
     s = requests.Session()
-    retry = Retry(total=2, backoff_factor=0.3, status_forcelist=[429,500,502,503])
-    s.mount("http://", HTTPAdapter(max_retries=retry, pool_maxsize=100))
-    s.mount("https://", HTTPAdapter(max_retries=retry, pool_maxsize=100))
-    s.headers["User-Agent"] = UA
+    s.headers.update(HEADERS)
+    s.verify = False
     return s
 
-def _read(path: str) -> List[str]:
-    if not os.path.exists(path):
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        return [l.strip() for l in f if l.strip() and not l.strip().startswith("#")]
 
-def _norm_url(url: str) -> str:
-    url = url.strip()
-    url = re.sub(r"https?://github\.com/([^/]+)/([^/]+)/blob/(.+)",
-                 r"https://raw.githubusercontent.com/\1/\2/\3", url)
-    url = re.sub(r"https?://gitee\.com/([^/]+)/([^/]+)/blob/(.+)",
-                 r"https://gitee.com/\1/\2/raw/\3", url)
-    return url
+# ═══════════════════════════════════════════
+#  阶段1: 抓取（自动屏蔽死源）
+# ═══════════════════════════════════════════
 
-
-# ============================================================
-#  别名引擎 (适配: 主名,别名1,别名2,re:正则)
-# ============================================================
-class AliasEngine:
-    """
-    格式: 主名,别名1,别名2,re:正则,...
-    第一个逗号前 = 标准名(主名)
-    后续 = 别名 (re:开头为正则)
-    """
-    def __init__(self):
-        self.exact: Dict[str, str] = {}      # alias_lower -> 主名
-        self.regex: List[Tuple[re.Pattern, str]] = []  # (pattern, 主名)
-        self._load()
-
-    def _load(self):
-        path = os.path.join(CONFIG, "alias.txt")
-        if not os.path.exists(path):
-            logger.warning("alias.txt 不存在")
-            return
-
-        count_exact = 0
-        count_regex = 0
-
-        with open(path, "r", encoding="utf-8") as f:
-            for raw in f:
-                line = raw.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "," not in line:
-                    continue
-
-                parts = line.split(",")
-                standard = parts[0].strip()
-                if not standard:
-                    continue
-
-                # 主名自身映射
-                self.exact[standard.lower()] = standard
-                count_exact += 1
-
-                # 别名
-                for alias in parts[1:]:
-                    alias = alias.strip()
-                    if not alias:
-                        continue
-                    if alias.startswith("re:"):
-                        # 正则别名
-                        pattern_str = alias[3:]
-                        try:
-                            pat = re.compile(pattern_str)
-                            self.regex.append((pat, standard))
-                            count_regex += 1
-                        except re.error as e:
-                            logger.debug(f"正则错误: {pattern_str} -> {e}")
-                    else:
-                        self.exact[alias.lower()] = standard
-                        count_exact += 1
-
-        logger.info(f"别名引擎: {count_exact} 精确, {count_regex} 正则")
-
-    def resolve(self, name: str) -> str:
-        """频道名 → 标准名"""
-        name_stripped = name.strip()
-        low = name_stripped.lower()
-
-        # 1. 精确匹配
-        if low in self.exact:
-            return self.exact[low]
-
-        # 2. 正则匹配
-        for pat, std in self.regex:
-            if pat.search(name_stripped):
-                return std
-
-        return name_stripped
-
-    def add_alias(self, alias: str, standard: str):
-        """追加新别名到文件"""
-        path = os.path.join(CONFIG, "alias.txt")
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(f"{standard},{alias}\n")
-        self.exact[alias.lower()] = standard
-
-
-# ============================================================
-#  Demo 模板 (支持同一频道出现在多个分类)
-# ============================================================
-class Demo:
-    """
-    解析 demo.txt，支持同一频道在多个分类中出现。
-    输出时每个分类独立，频道可重复出现在不同分类。
-    """
-    def __init__(self):
-        self.path = os.path.join(CONFIG, "demo.txt")
-        # 有序分类列表: [{"name": "📺央视频道", "channels": ["CCTV1", ...]}]
-        self.cats: List[Dict] = []
-        # 频道 → 出现在哪些分类 (一对多)
-        self.ch2cats: Dict[str, List[str]] = defaultdict(list)
-        # 每个分类内的频道顺序
-        self.cat_order: Dict[str, Dict[str, int]] = {}
-        self._load()
-
-    def _load(self):
-        if not os.path.exists(self.path):
-            logger.warning("demo.txt 不存在")
-            return
-
-        cur = None
-        with open(self.path, "r", encoding="utf-8") as f:
-            for raw in f:
-                line = raw.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.endswith(",#genre#"):
-                    cat_name = line[:-8].strip()
-                    cur = {"name": cat_name, "channels": []}
-                    self.cats.append(cur)
-                    self.cat_order[cat_name] = {}
-                elif cur is not None:
-                    idx = len(cur["channels"])
-                    cur["channels"].append(line)
-                    self.ch2cats[line].append(cur["name"])
-                    self.cat_order[cur["name"]][line] = idx
-
-        total_ch = sum(len(c["channels"]) for c in self.cats)
-        logger.info(f"Demo: {len(self.cats)} 分类, {total_ch} 条目, {len(self.ch2cats)} 唯一频道")
-
-    def get_cats_for_channel(self, std_name: str) -> List[str]:
-        """获取频道所属的所有分类"""
-        return self.ch2cats.get(std_name, [])
-
-    def get_order(self, cat_name: str, ch_name: str) -> int:
-        """获取频道在分类中的排序位置"""
-        return self.cat_order.get(cat_name, {}).get(ch_name, 99999)
-
-    def add_channel(self, name: str, cat: str):
-        """自进化: 追加新频道到分类"""
-        for c in self.cats:
-            if c["name"] == cat:
-                if name not in c["channels"]:
-                    idx = len(c["channels"])
-                    c["channels"].append(name)
-                    self.ch2cats[name].append(cat)
-                    self.cat_order[cat][name] = idx
-                return
-        # 新分类
-        self.cats.append({"name": cat, "channels": [name]})
-        self.ch2cats[name].append(cat)
-        self.cat_order[cat] = {name: 0}
-
-    def save(self):
-        with open(self.path, "w", encoding="utf-8") as f:
-            for c in self.cats:
-                f.write(f"{c['name']},#genre#\n")
-                for ch in c["channels"]:
-                    f.write(f"{ch}\n")
-                f.write("\n")
-
-
-# ============================================================
-#  黑白名单
-# ============================================================
-class Rules:
-    def __init__(self):
-        self.black: List[re.Pattern] = []
-        self.white: Set[str] = set()
-        self._load()
-
-    def _load(self):
-        path = os.path.join(CONFIG, "rules.txt")
-        if not os.path.exists(path):
-            return
-        section = ""
-        with open(path, "r", encoding="utf-8") as f:
-            for raw in f:
-                line = raw.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line == "[black]":
-                    section = "black"; continue
-                elif line == "[white]":
-                    section = "white"; continue
-
-                if section == "black":
-                    try:
-                        self.black.append(re.compile(line, re.I))
-                    except re.error:
-                        self.black.append(re.compile(re.escape(line), re.I))
-                elif section == "white":
-                    self.white.add(line.lower())
-
-        logger.info(f"规则: {len(self.black)} 黑名单, {len(self.white)} 白名单")
-
-    def is_black(self, name: str, url: str) -> bool:
-        for p in self.black:
-            if p.search(name) or p.search(url):
-                return True
+def check_source_alive(url, session):
+    """检测上游源是否可达"""
+    try:
+        resp = session.get(url, timeout=15, stream=True)
+        resp.raise_for_status()
+        chunk = resp.raw.read(512)
+        resp.close()
+        return bool(chunk)
+    except Exception:
         return False
 
-    def is_white(self, name: str) -> bool:
-        return name.lower() in self.white
+
+def load_sources():
+    """
+    读取 sources.txt，检测每个源是否可达
+    不可达的自动加 # 屏蔽，回写文件
+    返回: (活源列表, 死源列表)
+    """
+    path = os.path.join(CONFIG, "sources.txt")
+    if not os.path.exists(path):
+        log.error("config/sources.txt 不存在!")
+        return [], []
+
+    with open(path, encoding="utf-8") as f:
+        lines = f.readlines()
+
+    session = _session()
+    alive_sources = []
+    dead_sources = []
+    new_lines = []
+
+    log.info("检测上游源可达性...")
+
+    for line in lines:
+        raw = line.rstrip("\n")
+        stripped = raw.strip()
+
+        # 空行或已注释的行，原样保留
+        if not stripped or stripped.startswith("#"):
+            new_lines.append(raw)
+            continue
+
+        # 检测是否可达
+        if check_source_alive(stripped, session):
+            alive_sources.append(stripped)
+            new_lines.append(raw)
+            log.info("  ✅ %s", stripped[:70])
+        else:
+            dead_sources.append(stripped)
+            new_lines.append(f"# {raw}  # 死链已屏蔽")
+            log.warning("  ❌ %s → 已屏蔽", stripped[:70])
+
+    # 回写 sources.txt
+    if dead_sources:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(new_lines) + "\n")
+        log.info("已屏蔽 %d 个死源，回写 sources.txt", len(dead_sources))
+
+    return alive_sources, dead_sources
 
 
-# ============================================================
-#  图标
-# ============================================================
-class Icons:
-    def __init__(self):
-        self.map: Dict[str, str] = {}
-        for line in _read(os.path.join(CONFIG, "icons.txt")):
-            if "=" in line:
-                k, v = line.split("=", 1)
-                self.map[k.strip()] = v.strip()
-    def get(self, name: str) -> str:
-        return self.map.get(name, "")
+def fetch_source(url, session):
+    try:
+        resp = session.get(url, timeout=15)
+        resp.raise_for_status()
+        return resp.text
+    except Exception:
+        return None
 
 
-# ============================================================
-#  主引擎
-# ============================================================
-class Engine:
-    def __init__(self):
-        os.makedirs(OUTPUT, exist_ok=True)
-        self.alias = AliasEngine()
-        self.demo = Demo()
-        self.rules = Rules()
-        self.icons = Icons()
-        self.session = _session()
-        self.pool = ThreadPoolExecutor(max_workers=THREADS)
-        self.channels: List[Dict] = []   # 抓取后
-        self.alive: List[Dict] = []      # 测速后
-        # AI 缓存
-        self.cache_path = os.path.join(OUTPUT, "cache.json")
-        self.cache: Dict = {}
-        if os.path.exists(self.cache_path):
-            try:
-                self.cache = json.load(open(self.cache_path, encoding="utf-8"))
-            except Exception:
-                pass
+def parse_m3u(text):
+    entries = []
+    lines = text.strip().split("\n")
+    name = None
+    group = ""
+    for line in lines:
+        line = line.strip()
+        if line.startswith("#EXTINF:"):
+            m = re.search(r',(.+)$', line)
+            name = m.group(1).strip() if m else ""
+            gm = re.search(r'group-title="([^"]*)"', line)
+            group = gm.group(1) if gm else ""
+        elif line and not line.startswith("#") and name:
+            entries.append({"name": name, "url": line, "group": group})
+            name = None
+            group = ""
+    return entries
 
-    # ==================== 阶段1: 抓取 ====================
-    def fetch(self):
-        logger.info("=" * 50)
-        logger.info("阶段1: 抓取")
-        logger.info("=" * 50)
 
-        urls = [_norm_url(u) for u in _read(os.path.join(CONFIG, "sources.txt"))]
-        logger.info(f"源: {len(urls)}")
+def parse_txt(text):
+    entries = []
+    group = ""
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if ",#genre#" in line:
+            group = line.split(",")[0].strip()
+            continue
+        if "," in line:
+            name, url = line.split(",", 1)
+            entries.append({"name": name.strip(), "url": url.strip(), "group": group})
+    return entries
 
-        futs = {self.pool.submit(self._fetch_one, u): u for u in urls}
-        for fut in as_completed(futs):
-            try:
-                self.channels.extend(fut.result())
-            except Exception as e:
-                logger.warning(f"源异常: {e}")
 
-        # 过滤
-        before = len(self.channels)
-        self.channels = [
-            ch for ch in self.channels
-            if not self.rules.is_black(ch["name"], ch["url"])
-            and ch["name"].strip()
-            and not re.match(r"^\d+$", ch["name"].strip())
-        ]
-        logger.info(f"抓取: {before} → 过滤: {len(self.channels)}")
-
-    def _fetch_one(self, url: str) -> List[Dict]:
-        try:
-            r = self.session.get(url, timeout=15)
-            r.raise_for_status()
-            r.encoding = r.apparent_encoding or "utf-8"
-            text = r.text
-        except Exception as e:
-            logger.warning(f"  失败 [{url[:50]}]: {e}")
-            return []
-        if "#EXTINF:" in text[:500]:
-            return self._parse_m3u(text, url)
-        return self._parse_txt(text, url)
-
-    def _parse_m3u(self, text: str, src: str) -> List[Dict]:
-        result = []
-        name, logo, group = "", "", ""
-        for line in text.split("\n"):
-            line = line.strip()
-            if line.startswith("#EXTINF:"):
-                m = re.search(r",(.+)$", line)
-                name = m.group(1).strip() if m else ""
-                m2 = re.search(r'tvg-logo="([^"]*)"', line)
-                logo = m2.group(1) if m2 else ""
-                m3 = re.search(r'group-title="([^"]*)"', line)
-                group = m3.group(1) if m3 else ""
-            elif line and not line.startswith("#") and line.startswith("http"):
-                if name:
-                    result.append({"name": name, "url": line, "logo": logo, "group": group, "src": src})
-                name, logo, group = "", "", ""
-        return result
-
-    def _parse_txt(self, text: str, src: str) -> List[Dict]:
-        result = []
-        group = ""
-        for line in text.split("\n"):
+def load_rules():
+    rules = {"replace": [], "black": [], "white": []}
+    path = os.path.join(CONFIG, "rules.txt")
+    if not os.path.exists(path):
+        return rules
+    section = None
+    with open(path, encoding="utf-8") as f:
+        for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            if line.endswith(",#genre#"):
-                group = line[:-8].strip()
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1].lower()
                 continue
-            if "," in line:
-                name, urls_str = line.split(",", 1)
-                name = name.strip()
-                for u in urls_str.split("#"):
-                    u = u.strip()
-                    if u.startswith("http"):
-                        result.append({"name": name, "url": u, "logo": "", "group": group, "src": src})
-        return result
+            if section == "replace" and "->" in line:
+                old, new = line.split("->", 1)
+                rules["replace"].append((old.strip(), new.strip()))
+            elif section == "black":
+                rules["black"].append(line)
+            elif section == "white":
+                rules["white"].append(line)
+    return rules
 
-    # ==================== 阶段2: 测速 ====================
-    def speedtest(self):
-        logger.info("=" * 50)
-        logger.info(f"阶段2: 测速 ({THREADS}线程)")
-        logger.info("=" * 50)
-        if not self.channels:
-            return
 
-        # 按host分组预筛
-        hosts: Dict[str, List[Dict]] = defaultdict(list)
-        for ch in self.channels:
-            hosts[urlparse(ch["url"]).netloc].append(ch)
+def apply_rules(entries, rules):
+    result = []
+    for e in entries:
+        name, url = e["name"], e["url"]
+        for old, new in rules["replace"]:
+            name = name.replace(old, new)
+        if any(kw in name or kw in url for kw in rules["black"]):
+            continue
+        e["name"] = name
+        result.append(e)
+    return result
 
-        dead_hosts = self._prefilter(hosts)
-        logger.info(f"死亡服务器: {len(dead_hosts)}/{len(hosts)}")
 
-        candidates = [
-            ch for ch in self.channels
-            if urlparse(ch["url"]).netloc not in dead_hosts
-            or self.rules.is_white(ch["name"])
+# ═══════════════════════════════════════════
+#  阶段2: 全量测速 + 分辨率探测
+# ═══════════════════════════════════════════
+
+def check_url(item, session):
+    url = item["url"]
+    try:
+        t0 = time.time()
+        resp = session.get(url, timeout=TIMEOUT, stream=True)
+        resp.raise_for_status()
+        chunk = resp.raw.read(2048)
+        resp.close()
+        if not chunk:
+            return (item, -1)
+        speed = round((time.time() - t0) * 1000)
+        return (item, speed)
+    except Exception:
+        return (item, -1)
+
+
+def probe_resolution(url):
+    if not HAS_FFPROBE:
+        return None
+    try:
+        cmd = [
+            "ffprobe", "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams", "-i", url,
         ]
-        logger.info(f"待测: {len(candidates)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=FFPROBE_TIMEOUT)
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                w = stream.get("width", 0)
+                h = stream.get("height", 0)
+                if w and h:
+                    return (w, h)
+        return None
+    except Exception:
+        return None
 
-        futs = {self.pool.submit(self._test_one, ch["url"]): ch for ch in candidates}
+
+def test_all(entries):
+    session = _session()
+    alive = []
+    dead_count = 0
+
+    log.info("=" * 50)
+    log.info("阶段2: 全量测速 (并发=%d, 超时=%ds)", MAX_WORKERS, TIMEOUT)
+    log.info("=" * 50)
+    log.info("待测: %d", len(entries))
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(check_url, e, session): e for e in entries}
         done = 0
-        for fut in as_completed(futs):
-            ch = futs[fut]
+        for future in as_completed(futures):
             done += 1
-            try:
-                speed, valid, res = fut.result()
-            except Exception:
-                speed, valid, res = 0, False, ""
-
-            is_wl = self.rules.is_white(ch["name"])
-            if (speed >= MIN_MBPS and valid) or (is_wl and speed > 0):
-                ch["speed"] = round(speed, 2)
-                ch["resolution"] = res
-                self.alive.append(ch)
-
-            if done % 200 == 0:
-                logger.info(f"  进度: {done}/{len(candidates)} 存活: {len(self.alive)}")
-
-        self.alive.sort(key=lambda x: x.get("speed", 0), reverse=True)
-        logger.info(f"存活: {len(self.alive)}/{len(candidates)}")
-
-        stats = defaultdict(int)
-        for ch in self.alive:
-            stats[ch.get("resolution") or "未知"] += 1
-        logger.info(f"分辨率: {dict(stats)}")
-
-    def _prefilter(self, hosts: Dict[str, List]) -> Set[str]:
-        dead = set()
-        def _chk(url):
-            try:
-                return self.session.head(url, timeout=5, allow_redirects=True).status_code < 400
-            except Exception:
-                return False
-        for host, chs in hosts.items():
-            samples = chs[:SAMPLE_PER_HOST]
-            results = [f.result() for f in [self.pool.submit(_chk, c["url"]) for c in samples]]
-            if results and sum(results) / len(results) < (1 - HOST_DEAD_RATIO):
-                dead.add(host)
-        return dead
-
-    def _test_one(self, url: str) -> Tuple[float, bool, str]:
-        try:
-            t0 = time.time()
-            r = self.session.get(url, timeout=TIMEOUT, stream=True)
-            r.raise_for_status()
-            data = b""
-            for chunk in r.iter_content(8192):
-                data += chunk
-                if len(data) >= 1048576:
-                    break
-            r.close()
-            elapsed = max(time.time() - t0, 0.001)
-            speed = len(data) * 8 / elapsed / 1e6
-            # TS 0x47 校验
-            valid = len(data) >= 188 and all(
-                data[i] == TS_SYNC for i in range(0, min(len(data), 940), 188)
-            )
-            res = self._probe(url)
-            return speed, valid, res
-        except Exception:
-            return 0.0, False, ""
-
-    def _probe(self, url: str) -> str:
-        try:
-            out = subprocess.run(
-                ["ffprobe","-v","quiet","-select_streams","v:0",
-                 "-show_entries","stream=height","-of","csv=p=0",
-                 "-rw_timeout","5000000","-analyzeduration","2000000",url],
-                capture_output=True, text=True, timeout=8
-            ).stdout.strip()
-            h = int(out.split("\n")[0]) if out else 0
-            if h >= 2160: return "4K"
-            if h >= 1080: return "1080p"
-            if h >= 720: return "720p"
-            if h >= 480: return "480p"
-        except Exception:
-            pass
-        return ""
-
-    # ==================== 阶段3: 分类 (demo.txt 驱动) ====================
-    def categorize(self):
-        """
-        核心逻辑:
-        1. 别名标准化 → 得到标准名
-        2. 同名去重 (取最快)
-        3. 按 demo.txt 分配: 一个频道可出现在多个分类
-        4. 未匹配的 → AI分类 → 自进化追加到 demo.txt
-        """
-        logger.info("=" * 50)
-        logger.info("阶段3: 分类 (demo.txt 驱动)")
-        logger.info("=" * 50)
-        if not self.alive:
-            return
-
-        # 1. 别名标准化
-        for ch in self.alive:
-            ch["std"] = self.alias.resolve(ch["name"])
-
-        # 2. 去重: 同标准名取速度最快的 (保留多个URL备选)
-        best: Dict[str, Dict] = {}
-        for ch in self.alive:
-            k = ch["std"]
-            if k not in best or ch.get("speed", 0) > best[k].get("speed", 0):
-                best[k] = ch
-        unique = list(best.values())
-        logger.info(f"去重: {len(self.alive)} → {len(unique)} 唯一频道")
-
-        # 3. 按 demo.txt 分配 (一对多)
-        # 结果: OrderedDict { 分类名: [频道dict, ...] }
-        result: Dict[str, List[Dict]] = OrderedDict()
-        for cat in self.demo.cats:
-            result[cat["name"]] = []
-
-        matched_names: Set[str] = set()
-        unmatched: List[Dict] = []
-
-        for ch in unique:
-            std = ch["std"]
-            cats = self.demo.get_cats_for_channel(std)
-            if cats:
-                matched_names.add(std)
-                for cat_name in cats:
-                    result[cat_name].append(ch)
+            item, speed = future.result()
+            if speed > 0:
+                alive.append({"item": item, "speed": speed, "resolution": None})
             else:
-                unmatched.append(ch)
+                dead_count += 1
+            if done % 50 == 0 or done == len(entries):
+                log.info("  进度: %d/%d  存活: %d  死亡: %d",
+                         done, len(entries), len(alive), dead_count)
 
-        matched_count = sum(len(v) for v in result.values())
-        logger.info(f"匹配: {len(matched_names)} 频道 → {matched_count} 条目")
-        logger.info(f"未匹配: {len(unmatched)}")
+    log.info("测速完成: 存活 %d / 死亡 %d", len(alive), dead_count)
 
-        # 4. AI 兜底 + 自进化
-        if unmatched:
-            logger.info(f"AI 分类: {len(unmatched)} 个")
-            from ai import AIHelper
-            ai = AIHelper(self.cache, self.cache_path)
-            new_count = 0
-            for ch in unmatched:
-                std = ch["std"]
-                cat = ai.classify(std)
-                ch["cat"] = cat
-                # 追加到 demo.txt (自进化)
-                self.demo.add_channel(std, cat)
-                if cat not in result:
-                    result[cat] = []
-                result[cat].append(ch)
-                new_count += 1
-            ai.save()
-            self.demo.save()
-            logger.info(f"自进化: +{new_count} 频道写入 demo.txt")
+    # 分辨率探测
+    if HAS_FFPROBE and alive:
+        log.info("-" * 50)
+        log.info("分辨率探测 (最低 %dp, 共 %d 个)", MIN_HEIGHT, len(alive))
+        log.info("-" * 50)
 
-        # 5. 每个分类内按 demo.txt 顺序排序
-        for cat_name in result:
-            result[cat_name].sort(
-                key=lambda x: self.demo.get_order(cat_name, x["std"])
-            )
+        def _probe(entry):
+            res = probe_resolution(entry["item"]["url"])
+            return (entry, res)
 
-        # 6. 移除空分类
-        self.categorized = OrderedDict(
-            (k, v) for k, v in result.items() if v
-        )
+        low_res = 0
+        with ThreadPoolExecutor(max_workers=30) as pool:
+            futures = {pool.submit(_probe, a): a for a in alive}
+            done = 0
+            for future in as_completed(futures):
+                done += 1
+                entry, res = future.result()
+                if res:
+                    entry["resolution"] = res
+                    if res[1] < MIN_HEIGHT:
+                        low_res += 1
+                if done % 50 == 0 or done == len(alive):
+                    log.info("  探测: %d/%d  低分辨率淘汰: %d", done, len(alive), low_res)
 
-        total = sum(len(v) for v in self.categorized.values())
-        logger.info(f"最终: {len(self.categorized)} 分类, {total} 条目")
+        alive = [a for a in alive
+                 if a["resolution"] is None or a["resolution"][1] >= MIN_HEIGHT]
+        log.info("分辨率过滤后: 存活 %d / 淘汰 %d", len(alive), low_res)
+    else:
+        if not HAS_FFPROBE:
+            log.info("⚠️ ffprobe 未安装，跳过分辨率探测")
 
-    # ==================== 阶段4: 输出 ====================
-    def write_output(self):
-        logger.info("=" * 50)
-        logger.info("阶段4: 输出")
-        logger.info("=" * 50)
-        if not hasattr(self, "categorized") or not self.categorized:
-            return
+    alive.sort(key=lambda x: x["speed"])
+    return alive
 
-        # --- M3U ---
-        m3u_path = os.path.join(OUTPUT, "live.m3u")
-        lines = ["#EXTM3U"]
-        for cat, chs in self.categorized.items():
-            for ch in chs:
-                name = ch["std"]
-                logo = ch.get("logo") or self.icons.get(name)
-                res = ch.get("resolution", "")
-                display = f"{name} [{res}]" if res else name
-                attrs = f'tvg-name="{name}" group-title="{cat}"'
-                if logo:
-                    attrs += f' tvg-logo="{logo}"'
-                lines.append(f"#EXTINF:-1 {attrs},{display}")
-                lines.append(ch["url"])
-        with open(m3u_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
 
-        # --- TXT ---
-        txt_path = os.path.join(OUTPUT, "live.txt")
-        lines = []
-        for cat, chs in self.categorized.items():
-            lines.append(f"{cat},#genre#")
-            for ch in chs:
-                lines.append(f"{ch['std']},{ch['url']}")
-            lines.append("")
-        with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+# ═══════════════════════════════════════════
+#  阶段3: 分类 (demo.txt 驱动)
+# ═══════════════════════════════════════════
 
-        total = sum(len(v) for v in self.categorized.values())
-        logger.info(f"✅ {total} 条目 → live.m3u + live.txt")
+def load_demo():
+    path = os.path.join(CONFIG, "demo.txt")
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return parse_txt(f.read())
 
-    # ==================== 阶段5: EPG ====================
-    def process_epg(self):
-        logger.info("=" * 50)
-        logger.info("阶段5: EPG")
-        logger.info("=" * 50)
-        urls = _read(os.path.join(CONFIG, "epg.txt"))
-        if not urls:
-            logger.info("无EPG源")
-            return
 
-        all_progs = []
-        for url in urls:
-            url = _norm_url(url)
-            try:
-                r = self.session.get(url, timeout=30)
-                r.raise_for_status()
-                if url.endswith(".gz") or r.headers.get("Content-Encoding") == "gzip":
-                    text = gzip.decompress(r.content).decode("utf-8")
-                else:
-                    text = r.text
-                progs = self._parse_epg(text)
-                all_progs.extend(progs)
-                logger.info(f"  [{url[:40]}]: {len(progs)} 条")
-            except Exception as e:
-                logger.warning(f"  EPG失败: {e}")
-
-        if not all_progs:
-            return
-
-        # 去重
-        seen = set()
-        merged = []
-        for p in all_progs:
-            key = (p["ch_id"], p["start"], p["title"])
-            if key not in seen:
-                seen.add(key)
-                merged.append(p)
-
-        # 写 XML.GZ
-        root = ET.Element("tv")
-        seen_ch = set()
-        for p in merged:
-            if p["ch_id"] not in seen_ch:
-                seen_ch.add(p["ch_id"])
-                ch_el = ET.SubElement(root, "channel", id=p["ch_id"])
-                ET.SubElement(ch_el, "display-name").text = p["ch_name"]
-        for p in merged:
-            el = ET.SubElement(root, "programme", start=p["start"], stop=p["stop"], channel=p["ch_id"])
-            t = ET.SubElement(el, "title", lang="zh")
-            t.text = p["title"]
-
-        out_path = os.path.join(OUTPUT, "epg.xml.gz")
-        with gzip.open(out_path, "wt", encoding="utf-8") as f:
-            f.write(ET.tostring(root, encoding="unicode", xml_declaration=True))
-        logger.info(f"EPG: {len(all_progs)} → {len(merged)} → {out_path}")
-
-    def _parse_epg(self, xml_str: str) -> List[Dict]:
-        progs = []
-        try:
-            root = ET.fromstring(xml_str)
-        except ET.ParseError:
-            return progs
-        ch_map = {}
-        for ch in root.findall(".//channel"):
-            cid = ch.get("id", "")
-            dn = ch.find("display-name")
-            ch_map[cid] = dn.text if dn is not None and dn.text else cid
-        for p in root.findall(".//programme"):
-            title_el = p.find("title")
-            title = title_el.text if title_el is not None else ""
-            if not title or any(kw in title for kw in EPG_KEYWORDS):
+def load_alias():
+    path = os.path.join(CONFIG, "alias.txt")
+    alias_map = {}
+    if not os.path.exists(path):
+        return alias_map
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
                 continue
-            progs.append({
-                "ch_id": p.get("channel", ""),
-                "ch_name": ch_map.get(p.get("channel", ""), ""),
-                "start": p.get("start", ""),
-                "stop": p.get("stop", ""),
-                "title": title,
-            })
-        return progs
+            parts = line.split(",")
+            if len(parts) >= 2:
+                main_name = parts[0].strip()
+                for alt in parts[1:]:
+                    alt = alt.strip()
+                    if alt:
+                        alias_map[alt] = main_name
+    return alias_map
+
+
+def classify(alive_entries):
+    demo = load_demo()
+    alias_map = load_alias()
+
+    # 每个频道取最快的
+    best = {}
+    for a in alive_entries:
+        name = a["item"]["name"]
+        name = alias_map.get(name, name)
+        if name not in best or a["speed"] < best[name]["speed"]:
+            best[name] = a["item"]["url"]
+
+    # 按 demo 顺序输出，只输出活着的
+    result = []
+    current_group = ""
+    seen = set()
+
+    for d in demo:
+        name = d["name"]
+        group = d["group"]
+
+        if group != current_group:
+            current_group = group
+            seen = set()
+
+        if name in seen:
+            continue
+        seen.add(name)
+
+        if name in best:
+            result.append((group, name, best[name]))
+
+    return result
+
+
+# ═══════════════════════════════════════════
+#  阶段4: 输出（只有活频道）
+# ═══════════════════════════════════════════
+
+def write_output(classified):
+    os.makedirs(OUTPUT, exist_ok=True)
+
+    txt_path = os.path.join(OUTPUT, "iptv.txt")
+    m3u_path = os.path.join(OUTPUT, "iptv.m3u")
+
+    count = 0
+
+    with open(txt_path, "w", encoding="utf-8") as f:
+        current_group = ""
+        for group, name, url in classified:
+            if group != current_group:
+                current_group = group
+                f.write(f"\n{group},#genre#\n")
+            f.write(f"{name},{url}\n")
+            count += 1
+
+    with open(m3u_path, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        for group, name, url in classified:
+            f.write(f'#EXTINF:-1 group-title="{group}",{name}\n')
+            f.write(f"{url}\n")
+
+    log.info("输出: %s (%d 个频道)", txt_path, count)
+    log.info("输出: %s", m3u_path)
+    return count
+
+
+# ═══════════════════════════════════════════
+#  阶段5: EPG
+# ═══════════════════════════════════════════
+
+EPG_SOURCES = [
+    "https://gitee.com/taksssss/tv/raw/main/epg/112114.xml.gz",
+    "https://gitee.com/taksssss/tv/raw/main/epg/51zmt.xml.gz",
+    "https://gitee.com/taksssss/tv/raw/main/epg/old.xml.gz",
+    "https://gitee.com/taksssss/tv/raw/main/epg/e.xml.gz",
+    "https://gitee.com/taksssss/tv/raw/main/epg/e2.xml.gz",
+    "https://gitee.com/taksssss/tv/raw/main/epg/e3.xml.gz",
+]
+
+
+def fetch_epg():
+    session = _session()
+    all_texts = []
+
+    for src in EPG_SOURCES:
+        try:
+            resp = session.get(src, timeout=30)
+            resp.raise_for_status()
+            data = resp.content
+            try:
+                data = gzip.decompress(data)
+            except Exception:
+                pass
+            text = data.decode("utf-8", errors="ignore")
+            pg_count = len(re.findall(r'<programme ', text))
+            log.info("  [%s]: %d 条", src[:50], pg_count)
+            all_texts.append(text)
+        except Exception as e:
+            log.warning("  EPG失败: %s", e)
+
+    if not all_texts:
+        log.warning("EPG: 无数据")
+        return
+
+    epg_path = os.path.join(OUTPUT, "epg.xml.gz")
+    merged = '<?xml version="1.0" encoding="UTF-8"?>\n<tv>\n'
+    for text in all_texts:
+        channels = re.findall(r'<channel[\s\S]*?</channel>', text)
+        programmes = re.findall(r'<programme[\s\S]*?</programme>', text)
+        for ch in channels:
+            merged += ch + "\n"
+        for pg in programmes:
+            merged += pg + "\n"
+    merged += "</tv>\n"
+
+    with gzip.open(epg_path, "wt", encoding="utf-8") as f:
+        f.write(merged)
+
+    total = sum(len(re.findall(r'<programme ', t)) for t in all_texts)
+    log.info("EPG: %d 条 → %s", total, epg_path)
+
+
+# ═══════════════════════════════════════════
+#  主流程
+# ═══════════════════════════════════════════
+
+def run():
+    t_start = time.time()
+
+    log.info("=" * 50)
+    log.info("阶段1: 抓取 + 死源屏蔽")
+    log.info("=" * 50)
+
+    # 检测源可达性，死源自动 # 屏蔽并回写
+    alive_sources, dead_sources = load_sources()
+
+    if not alive_sources:
+        log.error("所有源均不可达！")
+        return
+
+    # 抓取活源内容
+    session = _session()
+    all_entries = []
+
+    for url in alive_sources:
+        text = fetch_source(url, session)
+        if not text:
+            continue
+        if "#EXTM3U" in text[:100] or "#EXTINF" in text[:500]:
+            entries = parse_m3u(text)
+        else:
+            entries = parse_txt(text)
+        log.info("  [%s]: %d 个频道", url[:50], len(entries))
+        all_entries.extend(entries)
+
+    log.info("总计抓取: %d 个条目", len(all_entries))
+
+    # 规则过滤
+    rules = load_rules()
+    all_entries = apply_rules(all_entries, rules)
+    log.info("规则过滤后: %d", len(all_entries))
+
+    # 去重
+    seen = set()
+    unique = []
+    for e in all_entries:
+        key = (e["name"], e["url"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(e)
+    all_entries = unique
+    log.info("去重后: %d", len(all_entries))
+
+    # 阶段2: 全量测速 + 分辨率
+    alive = test_all(all_entries)
+
+    # 阶段3: 分类
+    log.info("=" * 50)
+    log.info("阶段3: 分类 (demo.txt 驱动)")
+    log.info("=" * 50)
+    classified = classify(alive)
+
+    # 阶段4: 输出
+    log.info("=" * 50)
+    log.info("阶段4: 输出")
+    log.info("=" * 50)
+    count = write_output(classified)
+
+    # 阶段5: EPG
+    log.info("=" * 50)
+    log.info("阶段5: EPG")
+    log.info("=" * 50)
+    fetch_epg()
+
+    elapsed = round(time.time() - t_start, 1)
+    log.info("✅ 完成 %.1fs  频道: %d  屏蔽源: %d", elapsed, count, len(dead_sources))
