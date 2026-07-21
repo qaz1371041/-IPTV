@@ -9,7 +9,7 @@ import subprocess
 import shutil
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
 import urllib3
@@ -22,10 +22,10 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(BASE, "config")
 OUTPUT = os.path.join(BASE, "output")
 
-TIMEOUT = 8          # 测速超时(秒)
-MAX_WORKERS = 80     # 并发线程数
+TIMEOUT = 10         # 测速超时(秒)
+MAX_WORKERS = 60     # 并发线程数（降低避免被限速）
 MIN_HEIGHT = 720     # 最低分辨率
-FFPROBE_TIMEOUT = 10 # ffprobe 超时(秒)
+FFPROBE_TIMEOUT = 12 # ffprobe 超时(秒)
 
 HEADERS = {
     "User-Agent": (
@@ -83,6 +83,62 @@ def _normalize_name(raw: str) -> str:
     return n.strip()
 
 
+def _name_similarity(a: str, b: str) -> float:
+    """计算两个频道名的相似度 (0.0~1.0)"""
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+    if len(shorter) == 0:
+        return 0.0
+    # 检查较短的是否是较长的子串
+    if shorter in longer:
+        return len(shorter) / len(longer)
+    # 计算字符交集相似度
+    set_a = set(a)
+    set_b = set(b)
+    intersection = set_a & set_b
+    union = set_a | set_b
+    return len(intersection) / len(union) if union else 0.0
+
+
+def _is_video_data(data: bytes) -> bool:
+    """检查数据是否是真实视频流（而非 HTML 错误页等）"""
+    if not data or len(data) < 8:
+        return False
+
+    # 检查是否是 HTML（错误页面）
+    text_start = data[:64].decode('utf-8', errors='ignore').strip().lower()
+    html_indicators = ['<!doctype', '<html', '<head', '<body', '<!DOCTYPE',
+                       '{"code"', '{"error"', '{"status"', '403', '404',
+                       'not found', 'forbidden', 'unauthorized']
+    for indicator in html_indicators:
+        if indicator.lower() in text_start:
+            return False
+
+    # MPEG-TS 流: 第一个字节是 0x47 (sync byte)
+    if data[0] == 0x47:
+        return True
+
+    # FLV 流: 前 3 字节是 "FLV"
+    if data[:3] == b'FLV':
+        return True
+
+    # MP4/fMP4: 前 4-8 字节包含 "ftyp" 或 "moof" 或 "mdat"
+    if b'ftyp' in data[:12] or b'moof' in data[:12] or b'mdat' in data[:12]:
+        return True
+
+    # 如果数据量足够大且不是纯文本，也认为是视频
+    if len(data) >= 4096:
+        # 检查是否大部分是二进制数据（非可打印字符）
+        printable = sum(1 for b in data[:256] if 32 <= b <= 126 or b in (9, 10, 13))
+        if printable / min(len(data), 256) < 0.5:
+            return True
+
+    return False
+
+
 def _build_index(alive_list, alias_map):
     """构建多级匹配索引"""
     exact_index = {}
@@ -128,7 +184,7 @@ def _build_index(alive_list, alias_map):
 
 
 def _match_channel(demo_name, alias_map, exact_index, normalized_index, keyword_index):
-    """7级匹配引擎"""
+    """6级匹配引擎（去掉了危险的模糊子串匹配）"""
     # Level 1: 精确匹配
     if demo_name in exact_index:
         return exact_index[demo_name]["url"], "exact"
@@ -149,15 +205,25 @@ def _match_channel(demo_name, alias_map, exact_index, normalized_index, keyword_
         if norm_alias and norm_alias in normalized_index:
             return normalized_index[norm_alias]["url"], "alias+normalized"
 
-    # Level 5: CCTV关键词匹配
+    # Level 5: CCTV关键词匹配（要求名字相似度高）
     m = re.search(r'(cctv\d+\+?)', norm)
     if m:
         kw = m.group(1)
         if kw in keyword_index and keyword_index[kw]:
-            best = min(keyword_index[kw], key=lambda x: x["speed"])
-            return best["url"], "keyword"
+            # 选速度最快且名字最相似的
+            candidates = keyword_index[kw]
+            best = None
+            best_score = -1
+            for c in candidates:
+                sim = _name_similarity(norm, _normalize_name(c["name"]))
+                score = sim * 100 - c["speed"] * 0.01
+                if score > best_score:
+                    best_score = score
+                    best = c
+            if best and best_score > 30:
+                return best["url"], "keyword"
 
-    # Level 6: 省份/卫视关键词匹配
+    # Level 6: 省份/卫视关键词匹配（要求名字相似度高）
     for prov in ["北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
                  "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
                  "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
@@ -165,15 +231,19 @@ def _match_channel(demo_name, alias_map, exact_index, normalized_index, keyword_
         if prov in demo_name:
             kw = prov + "卫视" if "卫视" in demo_name else prov
             if kw in keyword_index and keyword_index[kw]:
-                best = min(keyword_index[kw], key=lambda x: x["speed"])
-                return best["url"], "keyword"
+                candidates = keyword_index[kw]
+                best = None
+                best_score = -1
+                for c in candidates:
+                    sim = _name_similarity(norm, _normalize_name(c["name"]))
+                    score = sim * 100 - c["speed"] * 0.01
+                    if score > best_score:
+                        best_score = score
+                        best = c
+                if best and best_score > 30:
+                    return best["url"], "keyword"
 
-    # Level 7: 模糊子串匹配
-    if len(norm) >= 2:
-        for bnorm, bdata in normalized_index.items():
-            if norm in bnorm or bnorm in norm:
-                return bdata["url"], "fuzzy"
-
+    # ★ 不再做模糊子串匹配，避免货不对板
     return None, None
 
 
@@ -235,7 +305,7 @@ class Engine:
         self.all_entries = unique
         log.info("去重后: %d", len(self.all_entries))
 
-    # ---------- 阶段2: 测速 ----------
+    # ---------- 阶段2: 测速（真正的播放验证） ----------
     def speedtest(self):
         if not self.all_entries:
             log.warning("无条目可测速")
@@ -244,40 +314,49 @@ class Engine:
         session = _session()
         alive = []
         dead_count = 0
+        fake_count = 0
 
         log.info("=" * 50)
-        log.info("阶段2: 全量测速 (并发=%d, 超时=%ds)", MAX_WORKERS, TIMEOUT)
+        log.info("阶段2: 深度测速 - 验证真实可播放 (并发=%d, 超时=%ds)",
+                 MAX_WORKERS, TIMEOUT)
         log.info("=" * 50)
         log.info("待测: %d", len(self.all_entries))
+        log.info("ffprobe: %s", "✅ 可用" if HAS_FFPROBE else "❌ 未安装(将使用轻量验证)")
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-            futures = {pool.submit(self._check_url, e, session): e for e in self.all_entries}
+            futures = {pool.submit(self._deep_check_url, e, session): e for e in self.all_entries}
             done = 0
             for future in as_completed(futures):
                 done += 1
-                item, speed = future.result()
-                if speed > 0:
+                item, speed, status = future.result()
+                if status == "alive":
                     alive.append({"item": item, "speed": speed, "resolution": None})
+                elif status == "fake":
+                    fake_count += 1
                 else:
                     dead_count += 1
                 if done % 50 == 0 or done == len(self.all_entries):
-                    log.info("  进度: %d/%d  存活: %d  死亡: %d",
-                             done, len(self.all_entries), len(alive), dead_count)
+                    log.info("  进度: %d/%d  ✅可播放: %d  ❌不可达: %d  ⚠️假源: %d",
+                             done, len(self.all_entries), len(alive), dead_count, fake_count)
 
-        log.info("测速完成: 存活 %d / 死亡 %d", len(alive), dead_count)
+        log.info("测速完成: ✅可播放 %d / ❌不可达 %d / ⚠️假源(有响应但非视频) %d",
+                 len(alive), dead_count, fake_count)
 
-        # 分辨率探测
+        # 分辨率探测（ffprobe 深度验证）
         if HAS_FFPROBE and alive:
             log.info("-" * 50)
-            log.info("分辨率探测 (最低 %dp, 共 %d 个)", MIN_HEIGHT, len(alive))
+            log.info("ffprobe 深度验证 + 分辨率探测 (最低 %dp, 共 %d 个)", MIN_HEIGHT, len(alive))
             log.info("-" * 50)
+
+            verified = []
+            low_res = 0
+            probe_fail = 0
 
             def _probe(entry):
                 res = self._probe_resolution(entry["item"]["url"])
                 return (entry, res)
 
-            low_res = 0
-            with ThreadPoolExecutor(max_workers=30) as pool:
+            with ThreadPoolExecutor(max_workers=20) as pool:
                 futures = {pool.submit(_probe, a): a for a in alive}
                 done = 0
                 for future in as_completed(futures):
@@ -285,16 +364,22 @@ class Engine:
                     entry, res = future.result()
                     if res:
                         entry["resolution"] = res
-                        if res[1] < MIN_HEIGHT:
+                        if res[1] >= MIN_HEIGHT:
+                            verified.append(entry)
+                        else:
                             low_res += 1
+                    else:
+                        # ffprobe 无法解析 → 淘汰（不可播放）
+                        probe_fail += 1
                     if done % 50 == 0 or done == len(alive):
-                        log.info("  探测: %d/%d  低分辨率淘汰: %d", done, len(alive), low_res)
+                        log.info("  探测: %d/%d  通过: %d  低分辨率: %d  不可播放: %d",
+                                 done, len(alive), len(verified), low_res, probe_fail)
 
-            alive = [a for a in alive
-                     if a["resolution"] is None or a["resolution"][1] >= MIN_HEIGHT]
-            log.info("分辨率过滤后: 存活 %d / 淘汰 %d", len(alive), low_res)
+            alive = verified
+            log.info("深度验证后: 可播放 %d / 低分辨率淘汰 %d / 不可播放淘汰 %d",
+                     len(alive), low_res, probe_fail)
         elif not HAS_FFPROBE:
-            log.info("⚠️ ffprobe 未安装，跳过分辨率探测")
+            log.info("⚠️ ffprobe 未安装，跳过深度验证（仅做了轻量级视频头检测）")
 
         alive.sort(key=lambda x: x["speed"])
         self.alive = alive
@@ -318,7 +403,6 @@ class Engine:
             for d in demo[:15]:
                 log.info("   [%s] %s", d["group"], d["name"])
 
-        # ★ Fallback: demo为空时按原始分组输出
         if not demo:
             log.warning("⚠️ demo.txt 为空或不存在，将输出全部存活频道")
             result = []
@@ -329,7 +413,6 @@ class Engine:
             log.info("Fallback 输出: %d 个频道", len(result))
             return
 
-        # 构建索引并匹配
         exact_index, normalized_index, keyword_index = _build_index(self.alive, alias_map)
         log.info("索引构建完成: 精确=%d, 归一化=%d, 关键词=%d",
                  len(exact_index), len(normalized_index), len(keyword_index))
@@ -337,7 +420,7 @@ class Engine:
         result = []
         current_group = ""
         seen_in_group = set()
-        stats = {"exact": 0, "alias": 0, "normalized": 0, "keyword": 0, "fuzzy": 0, "miss": 0}
+        stats = {"exact": 0, "alias": 0, "normalized": 0, "keyword": 0, "miss": 0}
         misses = []
 
         for d in demo:
@@ -373,7 +456,6 @@ class Engine:
         log.info("  ✅ 别名匹配: %d", stats["alias"])
         log.info("  ✅ 归一化匹配: %d", stats["normalized"])
         log.info("  ✅ 关键词匹配: %d", stats["keyword"])
-        log.info("  ✅ 模糊匹配: %d", stats["fuzzy"])
         log.info("  ❌ 未匹配: %d", stats["miss"])
         log.info("  总计输出: %d 个频道", len(result))
 
@@ -588,29 +670,181 @@ class Engine:
             result.append(e)
         return result
 
-    def _check_url(self, item, session):
+    # =====================================================
+    # ★ 核心重写：深度测速 - 验证真实可播放
+    # =====================================================
+
+    def _deep_check_url(self, item, session):
+        """
+        深度验证频道是否可播放
+        返回: (item, speed_ms, status)
+        status: "alive"=可播放, "dead"=不可达, "fake"=有响应但非视频
+        """
         url = item["url"]
         try:
             t0 = time.time()
-            resp = session.get(url, timeout=TIMEOUT, stream=True)
-            resp.raise_for_status()
-            chunk = resp.raw.read(2048)
-            resp.close()
-            if not chunk:
-                return (item, -1)
-            speed = round((time.time() - t0) * 1000)
-            return (item, speed)
+
+            # 根据 URL 类型选择不同的验证策略
+            url_lower = url.lower()
+
+            if '.m3u8' in url_lower or 'm3u8' in url_lower:
+                return self._check_m3u8_stream(item, url, session, t0)
+            else:
+                return self._check_direct_stream(item, url, session, t0)
+
+        except requests.exceptions.Timeout:
+            return (item, -1, "dead")
+        except requests.exceptions.ConnectionError:
+            return (item, -1, "dead")
         except Exception:
-            return (item, -1)
+            return (item, -1, "dead")
+
+    def _check_m3u8_stream(self, item, url, session, t0):
+        """
+        验证 m3u8 流：
+        1. 获取 m3u8 播放列表
+        2. 如果是 master playlist，追踪到子 playlist
+        3. 找到第一个 .ts 视频片段
+        4. 下载并验证 .ts 片段是真实视频数据
+        """
+        # Step 1: 获取 m3u8 播放列表
+        resp = session.get(url, timeout=TIMEOUT)
+        resp.raise_for_status()
+
+        content_type = resp.headers.get('Content-Type', '').lower()
+        content = resp.text
+
+        # 基本检查：应该是 m3u8 内容
+        if '#EXTM3U' not in content and '#EXTINF' not in content:
+            # 可能返回了 HTML 错误页
+            return (item, -1, "fake")
+
+        # Step 2: 处理 master playlist（嵌套 m3u8）
+        if '#EXT-X-STREAM-INF' in content:
+            sub_url = self._extract_sub_playlist(content, url)
+            if not sub_url:
+                return (item, -1, "fake")
+            try:
+                resp = session.get(sub_url, timeout=TIMEOUT)
+                resp.raise_for_status()
+                content = resp.text
+            except Exception:
+                return (item, -1, "dead")
+
+        # Step 3: 找到第一个 .ts 视频片段
+        ts_url = self._extract_first_ts(content, url)
+        if not ts_url:
+            return (item, -1, "fake")
+
+        # Step 4: 下载 .ts 片段并验证是真实视频
+        try:
+            ts_resp = session.get(ts_url, timeout=TIMEOUT, stream=True)
+            ts_resp.raise_for_status()
+            ts_data = ts_resp.raw.read(8192)
+            ts_resp.close()
+
+            if not ts_data or len(ts_data) < 100:
+                return (item, -1, "fake")
+
+            if not _is_video_data(ts_data):
+                return (item, -1, "fake")
+
+            speed = round((time.time() - t0) * 1000)
+            return (item, speed, "alive")
+
+        except Exception:
+            return (item, -1, "dead")
+
+    def _check_direct_stream(self, item, url, session, t0):
+        """
+        验证直链流（.flv, .ts, .mp4 等）：
+        1. 请求流 URL
+        2. 读取足够的数据（64KB）
+        3. 验证是真实视频数据（检查文件头魔数）
+        """
+        resp = session.get(url, timeout=TIMEOUT, stream=True)
+        resp.raise_for_status()
+
+        # 检查 Content-Type
+        content_type = resp.headers.get('Content-Type', '').lower()
+
+        # 如果明确是 text/html，大概率是错误页面
+        if 'text/html' in content_type:
+            # 读一点内容确认
+            data = resp.raw.read(512)
+            resp.close()
+            if _is_video_data(data):
+                # 有些服务器 Content-Type 设错了，但数据是对的
+                speed = round((time.time() - t0) * 1000)
+                return (item, speed, "alive")
+            return (item, -1, "fake")
+
+        # 读取 64KB 数据用于验证
+        data = resp.raw.read(65536)
+        resp.close()
+
+        if not data or len(data) < 100:
+            return (item, -1, "dead")
+
+        # 验证是否是真实视频数据
+        if not _is_video_data(data):
+            return (item, -1, "fake")
+
+        speed = round((time.time() - t0) * 1000)
+        return (item, speed, "alive")
+
+    def _extract_sub_playlist(self, content, base_url):
+        """从 master playlist 中提取子播放列表 URL"""
+        lines = content.strip().split('\n')
+        best_bw = -1
+        best_url = None
+
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if line.startswith('#EXT-X-STREAM-INF'):
+                # 提取带宽信息，优先选带宽最高的
+                bw_match = re.search(r'BANDWIDTH=(\d+)', line)
+                bw = int(bw_match.group(1)) if bw_match else 0
+
+                # 下一行是 URL
+                if i + 1 < len(lines):
+                    sub_path = lines[i + 1].strip()
+                    if sub_path and not sub_path.startswith('#'):
+                        if sub_path.startswith('http'):
+                            sub_url = sub_path
+                        else:
+                            sub_url = urljoin(base_url, sub_path)
+                        if bw >= best_bw:
+                            best_bw = bw
+                            best_url = sub_url
+
+        return best_url
+
+    def _extract_first_ts(self, content, base_url):
+        """从 m3u8 播放列表中提取第一个 .ts 片段 URL"""
+        lines = content.strip().split('\n')
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                # 这是一个媒体片段 URL
+                if line.startswith('http'):
+                    return line
+                else:
+                    return urljoin(base_url, line)
+        return None
 
     def _probe_resolution(self, url):
+        """使用 ffprobe 探测分辨率（同时也验证了流是否可播放）"""
         if not HAS_FFPROBE:
             return None
         try:
             cmd = [
                 "ffprobe", "-v", "quiet",
                 "-print_format", "json",
-                "-show_streams", "-i", url,
+                "-show_streams",
+                "-analyzeduration", "5000000",  # 分析5秒
+                "-probesize", "5000000",          # 探测5MB
+                "-i", url,
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=FFPROBE_TIMEOUT)
             if result.returncode != 0:
@@ -623,13 +857,13 @@ class Engine:
                     if w and h:
                         return (w, h)
             return None
+        except subprocess.TimeoutExpired:
+            return None
         except Exception:
             return None
 
     # =====================================================
-    # ★ 关键修复：专用 demo.txt 解析器
-    #   支持无逗号的纯频道名行（如 CCTV-1）
-    #   不再复用 _parse_txt，避免被静默丢弃
+    # ★ demo.txt 解析器
     # =====================================================
     def _load_demo(self):
         path = os.path.join(CONFIG, "demo.txt")
@@ -643,22 +877,15 @@ class Engine:
         with open(path, encoding="utf-8") as f:
             for raw_line in f:
                 line = raw_line.strip()
-
-                # 跳过空行和注释
                 if not line or line.startswith("#"):
                     continue
-
-                # 分组标记行
                 if ",#genre#" in line:
                     group = line.split(",")[0].strip()
                     continue
-
-                # ★ 核心修复：无论有没有逗号，都提取频道名
                 if "," in line:
                     name = line.split(",", 1)[0].strip()
                 else:
                     name = line.strip()
-
                 if name:
                     entries.append({"name": name, "url": "", "group": group})
 
