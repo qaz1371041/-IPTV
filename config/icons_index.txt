@@ -1,2 +1,0 @@
-CCTV1,https://cdn.example.com/cctv1.png
-湖南卫视,https://cdn.example.com/hntv.png

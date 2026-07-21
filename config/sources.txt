@@ -1,3 +1,0 @@
-# 示例上游源链接
-https://example.com/iptv.m3u
-https://raw.githubusercontent.com/xxx/xxx/main/iptv.txt
