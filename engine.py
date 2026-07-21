@@ -9,7 +9,7 @@ import urllib3
 urllib3.disable_warnings()
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(BASE, "config")
 OUTPUT = os.path.join(BASE, "output")
 
@@ -42,7 +42,6 @@ def _session():
 # ═══════════════════════════════════════════
 
 def check_source_alive(url, session):
-    """检测上游源是否可达"""
     try:
         resp = session.get(url, timeout=15, stream=True)
         resp.raise_for_status()
@@ -54,11 +53,6 @@ def check_source_alive(url, session):
 
 
 def load_sources():
-    """
-    读取 sources.txt，检测每个源是否可达
-    不可达的自动加 # 屏蔽，回写文件
-    返回: (活源列表, 死源列表)
-    """
     path = os.path.join(CONFIG, "sources.txt")
     if not os.path.exists(path):
         log.error("config/sources.txt 不存在!")
@@ -78,12 +72,10 @@ def load_sources():
         raw = line.rstrip("\n")
         stripped = raw.strip()
 
-        # 空行或已注释的行，原样保留
         if not stripped or stripped.startswith("#"):
             new_lines.append(raw)
             continue
 
-        # 检测是否可达
         if check_source_alive(stripped, session):
             alive_sources.append(stripped)
             new_lines.append(raw)
@@ -93,7 +85,6 @@ def load_sources():
             new_lines.append(f"# {raw}  # 死链已屏蔽")
             log.warning("  ❌ %s → 已屏蔽", stripped[:70])
 
-    # 回写 sources.txt
     if dead_sources:
         with open(path, "w", encoding="utf-8") as f:
             f.write("\n".join(new_lines) + "\n")
@@ -253,7 +244,6 @@ def test_all(entries):
 
     log.info("测速完成: 存活 %d / 死亡 %d", len(alive), dead_count)
 
-    # 分辨率探测
     if HAS_FFPROBE and alive:
         log.info("-" * 50)
         log.info("分辨率探测 (最低 %dp, 共 %d 个)", MIN_HEIGHT, len(alive))
@@ -324,7 +314,6 @@ def classify(alive_entries):
     demo = load_demo()
     alias_map = load_alias()
 
-    # 每个频道取最快的
     best = {}
     for a in alive_entries:
         name = a["item"]["name"]
@@ -332,7 +321,6 @@ def classify(alive_entries):
         if name not in best or a["speed"] < best[name]["speed"]:
             best[name] = a["item"]["url"]
 
-    # 按 demo 顺序输出，只输出活着的
     result = []
     current_group = ""
     seen = set()
@@ -454,14 +442,12 @@ def run():
     log.info("阶段1: 抓取 + 死源屏蔽")
     log.info("=" * 50)
 
-    # 检测源可达性，死源自动 # 屏蔽并回写
     alive_sources, dead_sources = load_sources()
 
     if not alive_sources:
         log.error("所有源均不可达！")
         return
 
-    # 抓取活源内容
     session = _session()
     all_entries = []
 
@@ -478,12 +464,10 @@ def run():
 
     log.info("总计抓取: %d 个条目", len(all_entries))
 
-    # 规则过滤
     rules = load_rules()
     all_entries = apply_rules(all_entries, rules)
     log.info("规则过滤后: %d", len(all_entries))
 
-    # 去重
     seen = set()
     unique = []
     for e in all_entries:
@@ -494,22 +478,18 @@ def run():
     all_entries = unique
     log.info("去重后: %d", len(all_entries))
 
-    # 阶段2: 全量测速 + 分辨率
     alive = test_all(all_entries)
 
-    # 阶段3: 分类
     log.info("=" * 50)
     log.info("阶段3: 分类 (demo.txt 驱动)")
     log.info("=" * 50)
     classified = classify(alive)
 
-    # 阶段4: 输出
     log.info("=" * 50)
     log.info("阶段4: 输出")
     log.info("=" * 50)
     count = write_output(classified)
 
-    # 阶段5: EPG
     log.info("=" * 50)
     log.info("阶段5: EPG")
     log.info("=" * 50)
