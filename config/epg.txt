@@ -1,0 +1,2 @@
+https://example.com/epg.xml.gz
+https://raw.githubusercontent.com/xxx/epg/main/epg.xml
