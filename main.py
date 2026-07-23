@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 IPTV 直播源聚合引擎
-核心: 模板驱动 + difflib模糊匹配 + 全量保留测速通过的源
+- 模板驱动 (demo.txt)
+- 5级模糊匹配 (精确→别名→归一化→正则→difflib)
+- 所有测速通过的源全部保留，不限数量
 """
 
 import re
@@ -42,11 +44,11 @@ OUTPUT_TXT = os.path.join(OUTPUT_DIR, "iptv.txt")
 # ============================================================
 # 参数
 # ============================================================
-MAX_WORKERS = 30           # 并发线程
-REQUEST_TIMEOUT = 15       # 抓取超时(秒)
-SPEED_TIMEOUT = 8          # 测速超时(秒)
-SPEED_MIN_BYTES = 1024     # 测速最少读到1KB才算存活
-DIFFLIB_CUTOFF = 0.6      # 模糊匹配阈值
+MAX_WORKERS = 30
+REQUEST_TIMEOUT = 15
+SPEED_TIMEOUT = 8
+SPEED_MIN_BYTES = 1024
+DIFFLIB_CUTOFF = 0.6
 
 # ============================================================
 # 归一化
@@ -61,13 +63,10 @@ _NOISE = sorted([
     "国防军事", "电视剧", "纪录", "科教", "戏曲", "社会与法",
     "新闻", "少儿", "音乐", "农业农村", "奥林匹克",
     "咪咕", "itv", "北联", "电信", "东联", "高码", "高码率",
-    "广西", "梅州", "汝阳", "山东", "上海", "斯特", "四川",
-    "太原", "天津", "影视", "浙江", "重庆",
 ], key=len, reverse=True)
 
 
 def norm(name: str) -> str:
-    """归一化频道名: 'CCTV-1综合高清' → 'cctv1'"""
     if not name:
         return ""
     s = name.strip().lower()
@@ -86,11 +85,6 @@ def norm(name: str) -> str:
 # 1. 解析 demo.txt
 # ============================================================
 def parse_template():
-    """
-    返回:
-      genres: OrderedDict {"央视频道": ["CCTV-1","CCTV-2",...], ...}
-      names:  ["CCTV-1", "CCTV-2", ...]  扁平列表
-    """
     genres = OrderedDict()
     names = []
     cur = "未分类"
@@ -121,9 +115,8 @@ def parse_template():
 # 2. 解析 alias.txt
 # ============================================================
 def parse_alias():
-    """返回 (alias_map, regex_list)"""
-    alias_map = {}       # {别名小写: 主名}
-    regex_list = []      # [(compiled, 主名)]
+    alias_map = {}
+    regex_list = []
 
     if not os.path.exists(ALIAS_FILE):
         log.info("alias.txt 不存在，跳过")
@@ -154,7 +147,7 @@ def parse_alias():
 
 
 # ============================================================
-# 3. 加载黑名单
+# 3. 黑名单
 # ============================================================
 def load_blacklist():
     bl = set()
@@ -173,7 +166,6 @@ def load_blacklist():
 # 4. 抓取所有源
 # ============================================================
 def fetch_sources():
-    """返回 [(频道名, URL), ...]"""
     urls = []
     if not os.path.exists(SOURCES_FILE):
         log.error("❌ sources.txt 不存在!")
@@ -263,13 +255,8 @@ def _parse_txt(text):
 # 5. 模糊匹配（核心）
 # ============================================================
 def match(target_names, source_channels, alias_map, regex_list):
-    """
-    返回: [(目标频道名, URL), ...]
-    匹配优先级: 精确 > 别名 > 归一化 > 正则 > difflib
-    """
     log.info("🎯 匹配: %d 目标 vs %d 源URL", len(target_names), len(source_channels))
 
-    # 索引
     t_lower = {n.strip().lower(): n for n in target_names}
     t_norm = {}
     for n in target_names:
@@ -312,13 +299,11 @@ def match(target_names, source_channels, alias_map, regex_list):
         if target:
             r2t.append((pat, target))
 
-    # difflib 列表
     t_name_list = [n.strip() for n in target_names]
     t_norm_list = [norm(n) for n in target_names]
 
     log.info("   索引: %d 别名, %d 正则, %d 归一化", len(a2t), len(r2t), len(t_norm))
 
-    # 匹配
     matched = []
     st = {"exact": 0, "alias": 0, "norm": 0, "regex": 0, "fuzzy": 0, "skip": 0}
 
@@ -328,20 +313,16 @@ def match(target_names, source_channels, alias_map, regex_list):
         nn = norm(name)
         target = None
 
-        # 1 精确
         if nl in t_lower:
             target = t_lower[nl]
             st["exact"] += 1
-        # 2 别名
         elif nl in a2t:
             target = a2t[nl]
             st["alias"] += 1
-        # 3 归一化
         elif nn and nn in t_norm:
             target = t_norm[nn]
             st["norm"] += 1
 
-        # 4 正则
         if not target:
             for pat, t in r2t:
                 try:
@@ -352,7 +333,6 @@ def match(target_names, source_channels, alias_map, regex_list):
                 except Exception:
                     pass
 
-        # 5 ★ difflib ★
         if not target:
             if nn and len(nn) >= 2:
                 c = difflib.get_close_matches(nn, t_norm_list, n=1, cutoff=DIFFLIB_CUTOFF)
@@ -375,7 +355,6 @@ def match(target_names, source_channels, alias_map, regex_list):
              st["exact"], st["alias"], st["norm"], st["regex"], st["fuzzy"], st["skip"])
     log.info("   匹配URL: %d 条", len(matched))
 
-    # 覆盖统计
     hit = set(t for t, _ in matched)
     log.info("   覆盖频道: %d/%d", len(hit), len(target_names))
     miss = set(target_names) - hit
@@ -386,7 +365,7 @@ def match(target_names, source_channels, alias_map, regex_list):
 
 
 # ============================================================
-# 6. 去重（同频道同URL只留一条）
+# 6. 去重
 # ============================================================
 def dedup(matched):
     seen = set()
@@ -404,12 +383,7 @@ def dedup(matched):
 # 7. 测速（全部保留通过的）
 # ============================================================
 def speed_test(entries):
-    """
-    测速，所有存活的URL全部保留，不限数量。
-    返回: [(target, url, speed), ...] 按频道分组、组内按速度降序
-    """
-    log.info("⚡ 测速 %d 条URL (超时%ds, 最少%d bytes)...",
-             len(entries), SPEED_TIMEOUT, SPEED_MIN_BYTES)
+    log.info("⚡ 测速 %d 条URL...", len(entries))
 
     def _test(item):
         target, url = item
@@ -418,11 +392,10 @@ def speed_test(entries):
             r = requests.get(url, stream=True, timeout=SPEED_TIMEOUT, headers={
                 "User-Agent": "Mozilla/5.0"
             })
-            # 读取数据
-            data = r.raw.read(204800)  # 读200KB
+            data = r.raw.read(204800)
             elapsed = time.time() - start
             if elapsed > 0 and len(data) >= SPEED_MIN_BYTES:
-                speed = len(data) / elapsed  # bytes/s
+                speed = len(data) / elapsed
                 return (target, url, speed)
             return (target, url, 0)
         except Exception:
@@ -440,7 +413,7 @@ def speed_test(entries):
             if done % 200 == 0 or done == total:
                 log.info("   进度: %d/%d", done, total)
 
-    # 过滤: 只保留 speed > 0 的（全部保留！）
+    # ★ 全部保留通过的，不限数量 ★
     alive = [(t, u, s) for t, u, s in results if s > 0]
     dead = len(results) - len(alive)
 
@@ -465,19 +438,11 @@ def speed_test(entries):
 # 8. 输出
 # ============================================================
 def output(entries, genres):
-    """生成 M3U + TXT，按 demo.txt 分类顺序"""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # 按频道聚合URL
     ch_urls = OrderedDict()
     for target, url, speed in entries:
         ch_urls.setdefault(target, []).append(url)
-
-    # 频道→分类
-    ch_genre = {}
-    for g, names in genres.items():
-        for n in names:
-            ch_genre[n] = g
 
     # M3U
     m3u = ["#EXTM3U"]
@@ -520,43 +485,31 @@ def main():
     log.info("=" * 60)
     t0 = time.time()
 
-    # 1. 解析模板
     genres, target_names = parse_template()
-
-    # 2. 解析别名
     alias_map, regex_list = parse_alias()
-
-    # 3. 加载黑名单
     blacklist = load_blacklist()
 
-    # 4. 抓取
     source_channels = fetch_sources()
     if not source_channels:
         log.error("❌ 无数据，退出")
         sys.exit(1)
 
-    # 过滤黑名单
     if blacklist:
         before = len(source_channels)
         source_channels = [(n, u) for n, u in source_channels if u not in blacklist]
         log.info("🚫 黑名单过滤: %d → %d", before, len(source_channels))
 
-    # 5. 模糊匹配
     matched = match(target_names, source_channels, alias_map, regex_list)
     if not matched:
         log.error("❌ 无匹配，退出")
         sys.exit(1)
 
-    # 6. 去重
     deduped = dedup(matched)
-
-    # 7. 测速（全部保留通过的）
     final = speed_test(deduped)
     if not final:
         log.error("❌ 测速后无存活URL，退出")
         sys.exit(1)
 
-    # 8. 输出
     output(final, genres)
 
     log.info("=" * 60)
