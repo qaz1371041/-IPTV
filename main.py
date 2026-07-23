@@ -1,49 +1,59 @@
-#!/usr/bin/env python3
-"""IPTV 列表生成器 - 入口"""
+"""
+IPTV 主入口 v3.0
+流程: 抓取 → 模板匹配 → 过滤死链 → 过滤低画质 → 测速排序 → 输出 → EPG
+"""
 
 import os
 import sys
+import time
 import logging
 from datetime import datetime, timezone, timedelta
 
-os.environ.setdefault('TZ', 'Asia/Shanghai')
-
-CST = timezone(timedelta(hours=8))
-
-
-class CSTFormatter(logging.Formatter):
-    def formatTime(self, record, datefmt=None):
-        dt = datetime.fromtimestamp(record.created, tz=CST)
-        if datefmt:
-            return dt.strftime(datefmt)
-        return dt.isoformat()
-
-
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(CSTFormatter('%(asctime)s [%(levelname)s] %(message)s'))
-
+# 日志配置
+tz = timezone(timedelta(hours=8))
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 log = logging.getLogger("iptv")
-log.addHandler(handler)
-log.setLevel(logging.INFO)
 
 
 def main():
+    start = time.time()
+    log.info("=" * 60)
+    log.info("IPTV Engine v3.0 启动")
+    log.info("时间: %s", datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S CST"))
+    log.info("=" * 60)
+
     from engine import Engine
 
-    log.info("=" * 60)
-    log.info("  IPTV 列表生成器 v2.1")
-    log.info("  时间: %s", datetime.now(CST).strftime('%Y-%m-%d %H:%M:%S CST'))
-    log.info("=" * 60)
-
     engine = Engine()
+
+    # 阶段1: 抓取
     engine.fetch()
+
+    # 阶段2: 模板匹配（只保留demo.txt需要的）
+    engine.match_template()
+
+    # 阶段3: 过滤死链
+    engine.filter_dead()
+
+    # 阶段4: 过滤低画质（只针对直播源）
+    engine.filter_quality()
+
+    # 阶段5: 测速排序
     engine.speedtest()
-    engine.categorize()
+
+    # 阶段6: 输出
     engine.write_output()
+
+    # 阶段7: EPG
     engine.process_epg()
 
+    elapsed = time.time() - start
     log.info("=" * 60)
-    log.info("  全部完成！")
+    log.info("全部完成! 耗时: %.1f 秒 (%.1f 分钟)", elapsed, elapsed / 60)
     log.info("=" * 60)
 
 
