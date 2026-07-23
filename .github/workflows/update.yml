@@ -1,40 +1,64 @@
-name: Update IPTV
+name: IPTV Update
 
 on:
   schedule:
-    - cron: '0 22 * * *'
-    - cron: '0 4 * * *'
-    - cron: '0 10 * * *'
-    - cron: '0 16 * * *'
+    - cron: '0 18 * * *'
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
+env:
+  TZ: Asia/Shanghai
 
 jobs:
-  run:
+  update:
     runs-on: ubuntu-latest
-    timeout-minutes: 130
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 45
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - run: |
-          pip install requests
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
 
-      - name: Run
-        env:
-          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      - name: Install Python dependencies
+        run: pip install --quiet requests urllib3
+
+      - name: Restore speedtest cache
+        uses: actions/cache@v4
+        with:
+          path: cache/
+          key: iptv-cache-${{ github.run_id }}
+          restore-keys: |
+            iptv-cache-
+
+      - name: Run IPTV Engine
         run: python main.py
 
-      - name: Push
-        run: |
-          git config user.name "bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add -A
-          git diff --cached --quiet || git commit -m "🔄 $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push --force
+      - name: Upload output artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: iptv-output
+          path: output/
+          retention-days: 7
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          force_orphan: true
+
+      - name: Save cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: cache/
+          key: iptv-cache-${{ github.run_id }}
