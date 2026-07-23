@@ -31,6 +31,8 @@ http://116.77.33.98:44330/tsfile/live/0014_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0015_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="📺央视频道",CCTV-15
 http://116.77.33.98:44330/tsfile/live/0016_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="📺央视频道",CCTV-17
+http://39.165.39.49:19901/tsfile/live/1088_1.m3u8?key=txiptv
 #EXTINF:-1 group-title="央视卫视1",CCTV-1
 http://116.77.33.98:44330/tsfile/live/0001_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视1",CCTV-2
@@ -63,10 +65,10 @@ http://116.77.33.98:44330/tsfile/live/0014_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0015_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视1",CCTV-15
 http://116.77.33.98:44330/tsfile/live/0016_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="央视卫视1",CCTV-17
+http://39.165.39.49:19901/tsfile/live/1088_1.m3u8?key=txiptv
 #EXTINF:-1 group-title="央视卫视1",武术世界
 https://dxtx.hntv.tv/live/wssj.m3u8?txSecret=c38b4d31ba4c45c6babb5c47132123e3&txTime=7ABB976A&wsSecret=f730763251dd1479e79d0613e4478923&wsTime=1772884829
-#EXTINF:-1 group-title="央视卫视1",东方卫视
-https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
 #EXTINF:-1 group-title="央视卫视1",江苏卫视
 https://txmov2.a.kwimgs.com/upic/2023/02/07/12/BMjAyMzAyMDcxMjQ3NDlfNzM5MzQzNzIyXzk1NjcxMTk5ODM5XzBfMw==_b_Bb92095c7df3c98b458dd14abf1d4b575.mp4
 #EXTINF:-1 group-title="央视卫视1",广东卫视
@@ -85,8 +87,6 @@ http://116.77.33.98:44330/tsfile/live/0136_1.m3u8?key=txiptv&playlive=0&authid=0
 http://hongzhijiaoyu.net:8188/udp/239.77.0.215:5146
 #EXTINF:-1 group-title="央视卫视1",湖北卫视
 http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="央视卫视1",吉林卫视
-http://116.77.33.98:44330/tsfile/live/0116_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视1",重庆卫视
 http://116.77.33.98:44330/tsfile/live/0142_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="咪咕频道",CCTV-1
@@ -121,8 +121,8 @@ http://116.77.33.98:44330/tsfile/live/0014_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0015_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="咪咕频道",CCTV-15
 http://116.77.33.98:44330/tsfile/live/0016_1.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="咪咕频道",东方卫视
-https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
+#EXTINF:-1 group-title="咪咕频道",CCTV-17
+http://39.165.39.49:19901/tsfile/live/1088_1.m3u8?key=txiptv
 #EXTINF:-1 group-title="咪咕频道",江苏卫视
 https://txmov2.a.kwimgs.com/upic/2023/02/07/12/BMjAyMzAyMDcxMjQ3NDlfNzM5MzQzNzIyXzk1NjcxMTk5ODM5XzBfMw==_b_Bb92095c7df3c98b458dd14abf1d4b575.mp4
 #EXTINF:-1 group-title="咪咕频道",广东卫视
@@ -141,8 +141,6 @@ http://116.77.33.98:44330/tsfile/live/0136_1.m3u8?key=txiptv&playlive=0&authid=0
 http://hongzhijiaoyu.net:8188/udp/239.77.0.215:5146
 #EXTINF:-1 group-title="咪咕频道",湖北卫视
 http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="咪咕频道",吉林卫视
-http://116.77.33.98:44330/tsfile/live/0116_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="咪咕频道",重庆卫视
 http://116.77.33.98:44330/tsfile/live/0142_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",CCTV-1
@@ -179,16 +177,30 @@ http://116.77.33.98:44330/tsfile/live/0015_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0016_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",CCTV-16
 http://116.77.33.98:44330/tsfile/live/0017_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="央视卫视2",CCTV-17
+http://39.165.39.49:19901/tsfile/live/1088_1.m3u8?key=txiptv
 #EXTINF:-1 group-title="央视卫视2",CCTV-第一剧场
-http://taihang.coccc.online:808/hls/25/index.m3u8
-#EXTINF:-1 group-title="央视卫视2",东方卫视
-https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
+http://dassby.qqff.top:99/live/第一剧场/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-风云剧场
+http://dassby.qqff.top:99/live/风云剧场/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-风云足球
+http://dassby.qqff.top:99/live/风云足球/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-女性时尚
+http://dassby.qqff.top:99/live/女性时尚/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-世界地理
+http://dassby.qqff.top:99/live/世界地理/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-怀旧剧场
+http://dassby.qqff.top:99/live/怀旧剧场/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",CCTV-央视台球
+http://dassby.qqff.top:99/live/央视台球/index.m3u8
 #EXTINF:-1 group-title="央视卫视2",江苏卫视
 https://txmov2.a.kwimgs.com/upic/2023/02/07/12/BMjAyMzAyMDcxMjQ3NDlfNzM5MzQzNzIyXzk1NjcxMTk5ODM5XzBfMw==_b_Bb92095c7df3c98b458dd14abf1d4b575.mp4
 #EXTINF:-1 group-title="央视卫视2",广东卫视
 https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
 #EXTINF:-1 group-title="央视卫视2",北京卫视
 http://103.72.172.253:8041/hls/345649569/index.m3u8
+#EXTINF:-1 group-title="央视卫视2",浙江卫视
+http://116.77.33.98:44330/tsfile/live/0124_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",安徽卫视
 http://116.77.33.98:44330/tsfile/live/0130_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",湖南卫视
@@ -207,8 +219,6 @@ http://116.77.33.98:44330/tsfile/live/0123_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0139_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",辽宁卫视
 http://116.77.33.98:44330/tsfile/live/0121_1.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="央视卫视2",吉林卫视
-http://116.77.33.98:44330/tsfile/live/0116_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",黑龙江卫视
 http://116.77.33.98:44330/tsfile/live/0143_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="央视卫视2",江西卫视
@@ -220,13 +230,15 @@ http://hongzhijiaoyu.net:8188/udp/239.77.0.215:5146
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",凤凰中文
 http://116.77.239.26:44300/tsfile/live/0141_2.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",TVB Plus
-https://vdm6-ali.gdtuohang.com/live/h6-2.flv
+https://vdm6-hw.nbgdsygs.com/live/h6-2.flv
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",澳视澳门
 https://globallive.tdm.com.mo/ch1/ch1.live/chunklist_w1441835208.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",广东珠江
 http://www.yahao.host:4022/udp/239.77.0.1:5146
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",广东体育
 http://116.77.239.26:44300/tsfile/live/0124_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="🇭🇰港澳台(主线)",Hope
+http://tvhope.cdnvideo.ru/tvhope-pull/tvhope_1/playlist.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",TVBS-亚洲
 http://38.64.72.148:80/hls/modn/list/4005/chunklist1.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",ZOO MOO
@@ -234,23 +246,19 @@ https://zoomoo-samsungau.amagi.tv:443/playlist1080p.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",民视新闻
 http://38.64.72.148:80/hls/modn/list/4012/chunklist1.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",台视新闻
-http://38.64.72.148:80/hls/modn/list/4013/chunklist1.m3u8
+http://38.64.72.148/hls/modn/list/4013/chunklist0.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",亚洲新闻
 http://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66ebbe/index_4.m3u8
-#EXTINF:-1 group-title="🇭🇰港澳台(主线)",新唐人
-https://ntd02.akamaized.net/HD-NY/tracks-v3a1/mono.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",人间卫视
 https://5ddce30eb4b55.streamlock.net/bltvhd/bltv1/chunklist_w614428743.m3u8
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",中天新闻
-http://4gtv.cnlive.club/channel/3824d067/index.m3u8?q=1782639885837&proxy=false
+http://my5353.com/ztxw
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",CCTV-1
 http://116.77.33.98:44330/tsfile/live/0001_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="🇭🇰港澳台(主线)",CCTV-13
 http://116.77.33.98:44330/tsfile/live/0014_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="🎬电影直播",星空卫视
 http://116.77.239.26:44300/tsfile/live/0112_2.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="🎬电影直播",凤凰电影
-http://122.224.58.42:85/tsfile/live/1022_1.m3u8?key=txiptv&playlive=1&authid=0
 #EXTINF:-1 group-title="🎸演唱会现场",蔡依林演唱会
 https://alimov2.a.kwimgs.com/upic/2020/07/13/17/BMjAyMDA3MTMxNzEyMzZfODY2NDU4ODQ1XzMyMjk2MDQ4MzQ4XzJfMw==_b_B8f6ffb1ac85e8c6f0363ee3c3076d8df.mp4
 #EXTINF:-1 group-title="🏮历年春晚",江苏卫视2026跨年晚会
@@ -263,13 +271,11 @@ http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
 http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
 #EXTINF:-1 group-title="🐅湖北",湖北经视
 http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
-#EXTINF:-1 group-title="🐅湖北",巴东综合
-http://46240.hlsplay.aodianyun.com/tv_radio_46240/tv_channel_3522.m3u8?auth_key=4860354782-0-0-0bc026e554be331e11f9118a5507dbd6&extra_key=du5v5yekM-ggopdZ_sngtTZ65Uth9WDHICSAwr25ENDQIdlV3Yd2lHeLSlp5B8KLBoWG0nmJUj1QO75vWPg_oNJJLOYxRTOV57psEWQI4qKLGvWzL9PBysSluKuq-Ux9lJltJgQb5lWNdWOKYZiLcxSGG_008O5kq4mJC8KOxeo
+#EXTINF:-1 group-title="🐅湖北",恩施文旅
+https://46240.hlsplay.aodianyun.com/tv_radio_46240/tv_channel_1811.m3u8?auth_key=4857760464-0-0-ecabcbf26d39dc20cde584db2fa2a053&extra_key=D1dJezG95YTkYytoe8tr2Qhf-jhFFJmJpij9JNzLnfjYgxE5Q69rjZT1b2VrOxeb2zvhRo107e0Ze_h5agVjcLhNxl4RzjBShtdz-pQKUqaNbHnJMUJaS637QCoHNkKlJAb5i0lkR8MlxmIB6LIGojFm8kqvpZp_pI7SG10olDg
 #EXTINF:-1 group-title="🐅湖北",荆门教育
 http://stream.jmtv.com.cn/ggsh/sd/live.m3u8
 #EXTINF:-1 group-title="🐅湖北",荆门公共
 http://stream.jmtv.com.cn/ngpd/sd/live.m3u8
 #EXTINF:-1 group-title="🐅湖北",十堰经济
 http://p8.vzan.com/slowlive/701367497774448672/live.m3u8
-#EXTINF:-1 group-title="🐅湖北",湖北电视台
-http://116.77.33.98:44330/tsfile/live/0132_1.m3u8?key=txiptv&playlive=0&authid=0
