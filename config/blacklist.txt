@@ -1,0 +1,5 @@
+# 黑名单：每行一个URL或关键词，匹配到的源会被过滤
+# 示例：
+# http://example.com/bad-source.m3u8
+# 广告
+# 测试
