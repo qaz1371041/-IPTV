@@ -1,3 +1,12 @@
-# 直播源 (每行一个URL)
+# IPTV 上游源列表
+# 每行一个URL
+# # 开头 = 注释（上游源标记），不会被抓取
+# 死源自动标记到 cache/dead_sources.json（7天后自动恢复）
+
+https://iptv-org.github.io/iptv/countries/cn.m3u
+https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u
+https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u
+https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
+https://live.fanmingming.com/tv/m3u/ipv6.m3u
 https://raw.githubusercontent.com/luochen1975/2026myvt/main/output/result.txt
 https://raw.githubusercontent.com/luochen1975/2026myvt/main/output/result.m3u
