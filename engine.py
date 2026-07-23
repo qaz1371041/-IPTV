@@ -295,7 +295,7 @@ class Engine:
         if commented:
             with open(path, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
-            log.warning("  🔒 已永久注释: %s", url[:70])
+            log.warning("  已永久注释: %s", url[:70])
 
     # ==================== 阶段1: 抓取 ====================
 
@@ -357,7 +357,7 @@ class Engine:
                  MAX_WORKERS, TIMEOUT, MAX_RETRIES)
         log.info("=" * 50)
         log.info("待测: %d | ffprobe: %s",
-                 len(self.all_entries), "✅" if HAS_FFPROBE else "❌")
+                 len(self.all_entries), "OK" if HAS_FFPROBE else "NO")
 
         to_test = []
         for e in self.all_entries:
@@ -403,18 +403,18 @@ class Engine:
                     self._cache[url_key] = {"status": "dead", "timestamp": time.time()}
 
                 if done % 50 == 0 or done == len(to_test):
-                    log.info("  进度: %d/%d  ✅%d  ❌%d  ⚠️假源%d",
+                    log.info("  进度: %d/%d  alive=%d  dead=%d  fake=%d",
                              done, len(to_test), len(alive) - cached_count,
                              dead_count, fake_count)
 
-        log.info("测速完成: ✅%d (缓存%d+新测%d) / ❌%d / ⚠️假源%d",
+        log.info("测速完成: alive=%d (cache=%d+new=%d) / dead=%d / fake=%d",
                  len(alive), cached_count, len(alive) - cached_count,
                  dead_count, fake_count)
 
         # ffprobe 深度验证
         if HAS_FFPROBE and alive:
             log.info("-" * 50)
-            log.info("ffprobe 深度验证 (直播源: ≥%dp/≥%.1fMbps, 播放源: 不过滤)",
+            log.info("ffprobe 深度验证 (直播源: >=%dp/>=%.1fMbps, 播放源: 不过滤)",
                      MIN_HEIGHT, MIN_BITRATE / 1_000_000)
             log.info("-" * 50)
 
@@ -467,15 +467,15 @@ class Engine:
                             verified.append(entry)
 
                     if done % 30 == 0 or done == len(alive):
-                        log.info("  探测: %d/%d  ✅%d  低分辨率%d  低码率%d  不可播放%d  播放源跳过%d",
+                        log.info("  探测: %d/%d  ok=%d  low_res=%d  low_br=%d  fail=%d  skip=%d",
                                  done, len(alive), len(verified),
                                  low_res, low_bitrate, probe_fail, playback_skip)
 
             alive = verified
-            log.info("深度验证后: ✅%d / 低分辨率淘汰%d / 低码率淘汰%d / 不可播放%d / 播放源保留%d",
+            log.info("深度验证后: ok=%d / low_res=%d / low_br=%d / fail=%d / playback=%d",
                      len(alive), low_res, low_bitrate, probe_fail, playback_skip)
         elif not HAS_FFPROBE:
-            log.info("⚠️ ffprobe 未安装，跳过深度验证")
+            log.info("ffprobe 未安装，跳过深度验证")
 
         alive.sort(key=lambda x: x["speed"])
         self.alive = alive
@@ -492,14 +492,14 @@ class Engine:
         alias_map, reverse_alias, regex_patterns = self._load_alias()
 
         if self.alive:
-            log.info("📊 存活频道样本 (前15):")
+            log.info("存活频道样本 (前15):")
             for a in self.alive[:15]:
                 res_str = f" {a['resolution'][0]}x{a['resolution'][1]}" if a.get("resolution") else ""
                 br_str = f" {a['bitrate'] / 1_000_000:.1f}Mbps" if a.get("bitrate") else ""
                 log.info("   %s (%dms%s%s)", a["item"]["name"], a["speed"], res_str, br_str)
 
         if not demo:
-            log.warning("⚠️ demo.txt 为空，输出全部存活频道")
+            log.warning("demo.txt 为空，输出全部存活频道")
             result = []
             for a in self.alive:
                 group = a["item"].get("group", "") or "未分类"
@@ -507,7 +507,7 @@ class Engine:
             self.classified = result
             return
 
-        # ★ 先用正则+别名把所有存活频道映射到标准名
+        # 先用正则+别名把所有存活频道映射到标准名
         self._apply_alias_to_alive(alias_map, regex_patterns)
 
         exact_index, normalized_index, keyword_index = self._build_index(
@@ -551,10 +551,10 @@ class Engine:
 
         self.classified = result
 
-        log.info("═══ 匹配结果 ═══")
-        log.info("  ✅ 精确: %d | 别名: %d | 归一化: %d | 关键词: %d",
+        log.info("=== 匹配结果 ===")
+        log.info("  精确: %d | 别名: %d | 归一化: %d | 关键词: %d",
                  stats["exact"], stats["alias"], stats["normalized"], stats["keyword"])
-        log.info("  ❌ 未匹配: %d | 总输出: %d", stats["miss"], len(result))
+        log.info("  未匹配: %d | 总输出: %d", stats["miss"], len(result))
 
         if misses:
             log.warning("未匹配频道 (%d): %s", len(misses),
@@ -587,8 +587,8 @@ class Engine:
                 f.write(f'#EXTINF:-1 group-title="{group}",{name}\n')
                 f.write(f"{url}\n")
 
-        log.info("✅ %s (%d 个频道)", txt_path, count)
-        log.info("✅ %s", m3u_path)
+        log.info("OK %s (%d 个频道)", txt_path, count)
+        log.info("OK %s", m3u_path)
 
     # ==================== 阶段5: EPG ====================
 
@@ -612,12 +612,12 @@ class Engine:
                 text = data.decode("utf-8", errors="ignore")
                 pg_count = len(re.findall(r'<programme ', text))
                 if pg_count > 0:
-                    log.info("  ✅ [%s]: %d 条节目", src[:60], pg_count)
+                    log.info("  OK [%s]: %d 条节目", src[:60], pg_count)
                     all_texts.append(text)
                 else:
-                    log.warning("  ⚠️ [%s]: 无节目数据", src[:60])
+                    log.warning("  WARN [%s]: 无节目数据", src[:60])
             except Exception as e:
-                log.warning("  ❌ [%s]: %s", src[:60], str(e)[:80])
+                log.warning("  FAIL [%s]: %s", src[:60], str(e)[:80])
 
         if not all_texts:
             log.warning("EPG: 所有源均失败，跳过")
@@ -639,7 +639,7 @@ class Engine:
             f.write(merged)
 
         total = sum(len(re.findall(r'<programme ', t)) for t in all_texts)
-        log.info("✅ EPG: %d 条 → %s", total, epg_path)
+        log.info("OK EPG: %d 条 -> %s", total, epg_path)
 
     # ==================== 源加载 ====================
 
@@ -657,36 +657,35 @@ class Engine:
         alive_sources = []
         new_fail_count = {}
 
-        log.info("检测上游源可达性 (连续%d次不可达 → 永久注释)...", MAX_SOURCE_FAIL)
+        log.info("检测上游源可达性 (连续%d次不可达 -> 永久注释)...", MAX_SOURCE_FAIL)
 
         for line in lines:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
             if not _is_valid_source_url(stripped):
-                log.warning("  ⚠️ 无效URL格式，跳过: %s", stripped[:60])
+                log.warning("  无效URL格式，跳过: %s", stripped[:60])
                 continue
 
             if self._check_source_alive(stripped, session):
                 alive_sources.append(stripped)
                 if stripped in fail_count:
-                    log.info("  ✅ %s (恢复可达，重置计数)", stripped[:60])
+                    log.info("  OK %s (恢复可达，重置计数)", stripped[:60])
                 else:
-                    log.info("  ✅ %s", stripped[:60])
+                    log.info("  OK %s", stripped[:60])
             else:
                 count = fail_count.get(stripped, 0) + 1
                 new_fail_count[stripped] = count
                 if count >= MAX_SOURCE_FAIL:
-                    log.warning("  🔒 %s (连续%d次不可达，永久排除)",
+                    log.warning("  LOCK %s (连续%d次不可达，永久排除)",
                                 stripped[:60], count)
                     self._comment_out_source(stripped)
-                    del new_fail_count[stripped]
                 else:
-                    log.warning("  ❌ %s (第%d/%d次不可达)",
+                    log.warning("  FAIL %s (第%d/%d次不可达)",
                                 stripped[:60], count, MAX_SOURCE_FAIL)
 
         self._save_fail_count(new_fail_count)
-        log.info("源检测完成: ✅可达 %d 个", len(alive_sources))
+        log.info("源检测完成: 可达 %d 个", len(alive_sources))
         return alive_sources
 
     def _check_source_alive(self, url, session) -> bool:
@@ -954,9 +953,197 @@ class Engine:
         except (subprocess.TimeoutExpired, Exception):
             return None
 
-    # ==================== ★ 正则别名匹配 ====================
+    # ==================== 正则别名匹配 ====================
 
     def _apply_alias_to_alive(self, alias_map, regex_patterns):
+        """对所有存活频道，用正则+别名映射到标准名，直接修改 item name"""
+        mapped_count = 0
+        for a in self.alive:
+            original_name = a["item"]["name"]
+            # 先尝试正则匹配
+            for pattern, standard_name in regex_patterns:
+                try:
+                    if pattern.search(original_name):
+                        a["item"]["name"] = standard_name
+                        mapped_count += 1
+                        break
+                except Exception:
+                    continue
+            else:
+                # 再尝试精确别名匹配
+                name_lower = original_name.strip().lower()
+                if name_lower in alias_map:
+                    a["item"]["name"] = alias_map[name_lower]
+                    mapped_count += 1
+        if mapped_count > 0:
+            log.info("别名映射: %d 个频道名被标准化", mapped_count)
+
+    # ==================== 别名加载 ====================
+
+    def _load_alias(self):
         """
-        对所有存活频道，用正则+别名映射到标准名
-        直接修改 item["name"] 为
+        加载 alias.txt，返回:
+        - alias_map: {别名小写: 标准名}
+        - reverse_alias: {标准名小写: [别名列表]}
+        - regex_patterns: [(compiled_regex, 标准名), ...]
+        """
+        alias_map = {}
+        reverse_alias = defaultdict(list)
+        regex_patterns = []
+
+        path = os.path.join(CONFIG, "alias.txt")
+        if not os.path.exists(path):
+            log.warning("config/alias.txt 不存在，跳过别名")
+            return alias_map, reverse_alias, regex_patterns
+
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) < 2:
+                    continue
+                standard_name = parts[0]
+                aliases = parts[1:]
+
+                # 标准名自身也加入映射
+                alias_map[standard_name.lower()] = standard_name
+                reverse_alias[standard_name.lower()].append(standard_name)
+
+                for alias in aliases:
+                    if not alias:
+                        continue
+                    if alias.startswith("re:"):
+                        # 正则表达式别名
+                        regex_str = alias[3:]
+                        try:
+                            compiled = re.compile(regex_str)
+                            regex_patterns.append((compiled, standard_name))
+                        except re.error as e:
+                            log.warning("正则编译失败 [%s]: %s", regex_str[:40], e)
+                    else:
+                        # 普通别名
+                        alias_map[alias.lower()] = standard_name
+                        reverse_alias[standard_name.lower()].append(alias)
+
+        log.info("别名加载: %d 个映射, %d 个正则, %d 个标准频道",
+                 len(alias_map), len(regex_patterns), len(reverse_alias))
+        return alias_map, reverse_alias, regex_patterns
+
+    # ==================== 索引构建 ====================
+
+    def _build_index(self, alive_list, alias_map, reverse_alias):
+        exact_index = defaultdict(list)
+        normalized_index = defaultdict(list)
+        keyword_index = defaultdict(list)
+
+        for a in alive_list:
+            name = a["item"]["name"]
+            url = a["item"]["url"]
+            speed = a["speed"]
+
+            # 精确索引
+            exact_index[name.lower()].append((url, speed))
+
+            # 归一化索引
+            norm = _normalize_name(name)
+            if norm:
+                normalized_index[norm].append((url, speed))
+
+            # 关键词索引（用于模糊匹配）
+            keywords = self._extract_keywords(name)
+            for kw in keywords:
+                keyword_index[kw].append((url, speed, name))
+
+        return exact_index, normalized_index, keyword_index
+
+    def _extract_keywords(self, name):
+        keywords = set()
+        name_lower = name.lower().strip()
+        keywords.add(name_lower)
+
+        # 去掉常见后缀
+        for suffix in ["高清", "超清", "标清", "hd", "fhd", "uhd", "4k", "8k"]:
+            if name_lower.endswith(suffix):
+                keywords.add(name_lower[:-len(suffix)].strip())
+
+        # CCTV 特殊处理
+        m = re.match(r'cctv[-\s]*(\d+)', name_lower)
+        if m:
+            keywords.add(f"cctv{m.group(1)}")
+            keywords.add(f"cctv-{m.group(1)}")
+
+        return keywords
+
+    # ==================== 频道匹配 ====================
+
+    def _match_channel(self, name, alias_map, reverse_alias,
+                       exact_index, normalized_index, keyword_index):
+        # 1. 精确匹配
+        name_lower = name.lower()
+        if name_lower in exact_index:
+            urls = exact_index[name_lower]
+            urls.sort(key=lambda x: x[1])
+            return urls[0][0], "exact"
+
+        # 2. 别名匹配
+        if name_lower in alias_map:
+            standard = alias_map[name_lower]
+            std_lower = standard.lower()
+            if std_lower in exact_index:
+                urls = exact_index[std_lower]
+                urls.sort(key=lambda x: x[1])
+                return urls[0][0], "alias"
+
+        # 3. 归一化匹配
+        norm = _normalize_name(name)
+        if norm and norm in normalized_index:
+            urls = normalized_index[norm]
+            urls.sort(key=lambda x: x[1])
+            return urls[0][0], "normalized"
+
+        # 4. 关键词模糊匹配
+        keywords = self._extract_keywords(name)
+        best_url = None
+        best_score = 0.0
+        best_speed = float('inf')
+
+        for kw in keywords:
+            if kw in keyword_index:
+                for url, speed, matched_name in keyword_index[kw]:
+                    score = _name_similarity(norm, _normalize_name(matched_name))
+                    if score > best_score or (score == best_score and speed < best_speed):
+                        best_score = score
+                        best_url = url
+                        best_speed = speed
+
+        if best_score >= 0.6 and best_url:
+            return best_url, "keyword"
+
+        return None, None
+
+    # ==================== demo.txt 加载 ====================
+
+    def _load_demo(self):
+        path = os.path.join(CONFIG, "demo.txt")
+        if not os.path.exists(path):
+            log.warning("config/demo.txt 不存在")
+            return []
+
+        entries = []
+        group = ""
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if ",#genre#" in line:
+                    group = line.split(",")[0].strip()
+                    continue
+                if "," in line:
+                    name = line.split(",")[0].strip()
+                    if name:
+                        entries.append({"name": name, "group": group})
+        log.info("demo.txt 加载: %d 个频道模板", len(entries))
+        return entries
