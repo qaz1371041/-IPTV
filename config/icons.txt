@@ -1,2 +1,0 @@
-CCTV-1=https://example.com/icons/cctv1.png
-湖南卫视=https://example.com/icons/hunan.png
