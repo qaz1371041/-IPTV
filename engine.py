@@ -1,14 +1,10 @@
 """
-IPTV Engine v2.3
-
-修复:
-  1. 归一化增强：去掉 (720p)/(1080i)/[FHD] 等分辨率后缀
-  2. 别名双向映射：标准名↔别名 都能匹配
-  3. 反向索引：标准名→所有别名频道
-  4. 匹配引擎重写：6级精准匹配
-  5. 连续3次不可达 → 自动注释 sources.txt
-  6. 低画质过滤只针对直播源
-  7. EPG源更新
+IPTV Engine v2.4
+- 正则别名支持 (re: 前缀)
+- 连续3次不可达 → 自动注释 sources.txt
+- 低画质过滤只针对直播源
+- 归一化增强
+- 精准匹配 demo.txt 模板
 """
 
 import os
@@ -67,8 +63,8 @@ HAS_FFPROBE = shutil.which("ffprobe") is not None
 
 EPG_SOURCES = [
     "https://live.fanmingming.com/e.xml.gz",
+    "http://epg.51zmt.top:8000/e.xml.gz",
     "https://e.erw.cc/all.xml.gz",
-    "https://epg.51zmt.top:8000/e.xml.gz",
     "https://raw.githubusercontent.com/taksssss/tv/main/epg/51zmt.xml.gz",
     "https://gitee.com/taksssss/tv/raw/main/epg/51zmt.xml.gz",
 ]
@@ -113,14 +109,13 @@ _NOISE_WORDS = [
     "ipv6", "ipv4", "组播", "单播",
 ]
 
-# ★ 新增：分辨率/编码后缀正则（用于归一化时清洗）
 _RES_SUFFIX_RE = re.compile(
     r'[\s]*[\(\[（【]?\s*'
     r'(?:'
-    r'\d{3,4}\s*[pi]'          # 720p, 1080i, 1080p, 2160p
-    r'|\d{3,4}\s*[x×*]\s*\d{3,4}'  # 1280x720, 1920×1080
-    r'|uhd|fhd|qhd|hdr|sdr'   # 编码/画质标记
-    r'|h\.?26[45]|hevc|avc'   # 编码格式
+    r'\d{3,4}\s*[pi]'
+    r'|\d{3,4}\s*[x×*]\s*\d{3,4}'
+    r'|uhd|fhd|qhd|hdr|sdr'
+    r'|h\.?26[45]|hevc|avc'
     r'|mpeg-?[24]'
     r'|主|备|主备|备用|主线|备线'
     r'|ipv[46]'
@@ -138,30 +133,22 @@ _CN_NUM = {
 
 
 def _normalize_name(raw: str) -> str:
-    """
-    频道名归一化（增强版）
-    去掉分辨率后缀、噪声词、特殊符号
-    """
     n = raw.strip().lower()
     n = n.replace("＋", "+").replace("－", "-").replace("（", "(").replace("）", ")")
 
-    # 中文数字 → 阿拉伯数字
     def _cn2num(m):
         return m.group(1) + _CN_NUM.get(m.group(2), m.group(2))
     n = re.sub(r'(cctv|cctv-)([一二三四五六七八九十])', _cn2num, n)
 
-    # ★ 去掉分辨率/编码后缀（可多次，处理 "CCTV-3 (720p) [FHD]" 这种情况）
     for _ in range(3):
         new_n = _RES_SUFFIX_RE.sub('', n).strip()
         if new_n == n:
             break
         n = new_n
 
-    # 去掉噪声词
     for w in _NOISE_WORDS:
         n = n.replace(w, "")
 
-    # 去掉所有特殊符号
     n = re.sub(r'[\s\-_.,:;，。：；、()\[\]【】《》"\'\"\/|\\#*！!？?@&]+', '', n)
     return n.strip()
 
@@ -502,7 +489,7 @@ class Engine:
         log.info("=" * 50)
 
         demo = self._load_demo()
-        alias_map, reverse_alias = self._load_alias()
+        alias_map, reverse_alias, regex_patterns = self._load_alias()
 
         if self.alive:
             log.info("📊 存活频道样本 (前15):")
@@ -520,7 +507,9 @@ class Engine:
             self.classified = result
             return
 
-        # ★ 构建索引（使用双向别名）
+        # ★ 先用正则+别名把所有存活频道映射到标准名
+        self._apply_alias_to_alive(alias_map, regex_patterns)
+
         exact_index, normalized_index, keyword_index = self._build_index(
             self.alive, alias_map, reverse_alias
         )
@@ -965,209 +954,9 @@ class Engine:
         except (subprocess.TimeoutExpired, Exception):
             return None
 
-    # ==================== ★ 匹配索引（重写） ====================
+    # ==================== ★ 正则别名匹配 ====================
 
-    def _build_index(self, alive_list, alias_map, reverse_alias):
+    def _apply_alias_to_alive(self, alias_map, regex_patterns):
         """
-        构建多级匹配索引（双向别名版）
-
-        alias_map:     别名 → 标准名  (如 "CCTV9" → "CCTV-9")
-        reverse_alias: 标准名 → [别名列表]  (如 "CCTV-9" → ["CCTV9", "央视九套", ...])
-        """
-        exact_index = {}
-        normalized_index = {}
-        keyword_index = defaultdict(list)
-
-        for a in alive_list:
-            name = a["item"]["name"]
-            url = a["item"]["url"]
-            speed = a["speed"]
-
-            # 通过别名映射到标准名
-            std_name = alias_map.get(name, name)
-
-            data = {"url": url, "speed": speed, "name": std_name, "orig_name": name}
-
-            # ★ 精确索引：标准名 + 原始名 + 所有别名变体
-            keys = set([std_name, name])
-            # 如果原始名是某个标准名的别名，也把标准名加入
-            if name in alias_map:
-                keys.add(alias_map[name])
-            # 如果标准名有反向别名，也加入
-            if std_name in reverse_alias:
-                for alt in reverse_alias[std_name]:
-                    keys.add(alt)
-
-            for key in keys:
-                if key not in exact_index or speed < exact_index[key]["speed"]:
-                    exact_index[key] = data
-
-            # ★ 归一化索引：所有变体都归一化
-            norm_keys = set()
-            for key in keys:
-                nk = _normalize_name(key)
-                if nk:
-                    norm_keys.add(nk)
-
-            for nk in norm_keys:
-                if nk not in normalized_index or speed < normalized_index[nk]["speed"]:
-                    normalized_index[nk] = data
-
-            # 关键词索引
-            norm = _normalize_name(std_name)
-            m = re.search(r'(cctv\d+\+?)', norm)
-            if m:
-                keyword_index[m.group(1)].append(data)
-
-            m = re.search(r'([\u4e00-\u9fff]{2,4})(卫视)', norm)
-            if m:
-                keyword_index[m.group(1) + "卫视"].append(data)
-
-            provinces = [
-                "北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
-                "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
-                "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
-                "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海", "天津",
-            ]
-            for prov in provinces:
-                if prov in std_name or prov in name:
-                    keyword_index[prov].append(data)
-
-        return exact_index, normalized_index, keyword_index
-
-    def _match_channel(self, demo_name, alias_map, reverse_alias,
-                       exact_index, normalized_index, keyword_index):
-        """
-        6级精准匹配引擎（双向别名版）
-        """
-        # Level 1: 精确匹配（demo名直接在索引中）
-        if demo_name in exact_index:
-            return exact_index[demo_name]["url"], "exact"
-
-        # Level 2: demo名是标准名 → 查反向别名 → 在索引中找
-        if demo_name in reverse_alias:
-            for alt in reverse_alias[demo_name]:
-                if alt in exact_index:
-                    return exact_index[alt]["url"], "alias"
-
-        # Level 3: demo名是别名 → 映射到标准名 → 在索引中找
-        aliased = alias_map.get(demo_name)
-        if aliased and aliased in exact_index:
-            return exact_index[aliased]["url"], "alias"
-
-        # Level 4: 归一化匹配
-        norm = _normalize_name(demo_name)
-        if norm and norm in normalized_index:
-            return normalized_index[norm]["url"], "normalized"
-
-        # Level 5: 别名归一化
-        if aliased:
-            norm_alias = _normalize_name(aliased)
-            if norm_alias and norm_alias in normalized_index:
-                return normalized_index[norm_alias]["url"], "alias+normalized"
-
-        # Level 5b: 反向别名归一化
-        if demo_name in reverse_alias:
-            for alt in reverse_alias[demo_name]:
-                norm_alt = _normalize_name(alt)
-                if norm_alt and norm_alt in normalized_index:
-                    return normalized_index[norm_alt]["url"], "alias+normalized"
-
-        # Level 6: 关键词匹配（相似度>40%）
-        m = re.search(r'(cctv\d+\+?)', norm)
-        if m:
-            kw = m.group(1)
-            if kw in keyword_index and keyword_index[kw]:
-                best, best_score = None, -1
-                for c in keyword_index[kw]:
-                    sim = _name_similarity(norm, _normalize_name(c["name"]))
-                    score = sim * 100 - c["speed"] * 0.001
-                    if score > best_score:
-                        best_score = score
-                        best = c
-                if best and best_score > 40:
-                    return best["url"], "keyword"
-
-        provinces = [
-            "北京", "上海", "广东", "深圳", "浙江", "江苏", "湖南", "湖北",
-            "四川", "重庆", "山东", "河南", "河北", "福建", "安徽", "江西",
-            "辽宁", "吉林", "黑龙江", "陕西", "甘肃", "云南", "贵州",
-            "广西", "海南", "山西", "内蒙古", "新疆", "西藏", "宁夏", "青海", "天津",
-        ]
-        for prov in provinces:
-            if prov in demo_name:
-                kw = prov + "卫视" if "卫视" in demo_name else prov
-                if kw in keyword_index and keyword_index[kw]:
-                    best, best_score = None, -1
-                    for c in keyword_index[kw]:
-                        sim = _name_similarity(norm, _normalize_name(c["name"]))
-                        score = sim * 100 - c["speed"] * 0.001
-                        if score > best_score:
-                            best_score = score
-                            best = c
-                    if best and best_score > 40:
-                        return best["url"], "keyword"
-
-        return None, None
-
-    # ==================== 配置文件加载 ====================
-
-    def _load_demo(self):
-        path = os.path.join(CONFIG, "demo.txt")
-        if not os.path.exists(path):
-            log.warning("config/demo.txt 不存在")
-            return []
-        entries = []
-        group = ""
-        with open(path, encoding="utf-8") as f:
-            for raw_line in f:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if ",#genre#" in line:
-                    group = line.split(",")[0].strip()
-                    continue
-                if "," in line:
-                    name = line.split(",", 1)[0].strip()
-                else:
-                    name = line.strip()
-                if name:
-                    entries.append({"name": name, "url": "", "group": group})
-        log.info("demo.txt 加载: %d 个频道模板", len(entries))
-        if entries:
-            groups = list(dict.fromkeys(e["group"] for e in entries))
-            log.info("  分组(%d): %s", len(groups), groups[:10])
-        return entries
-
-    def _load_alias(self):
-        """
-        加载 alias.txt（Guovin/iptv-api 格式）
-        格式: 标准名,别名1,别名2,...
-
-        返回:
-          alias_map:     别名 → 标准名
-          reverse_alias: 标准名 → [别名列表]
-        """
-        path = os.path.join(CONFIG, "alias.txt")
-        alias_map = {}
-        reverse_alias = defaultdict(list)
-
-        if not os.path.exists(path):
-            log.warning("config/alias.txt 不存在")
-            return alias_map, reverse_alias
-
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                parts = [p.strip() for p in line.split(",") if p.strip()]
-                if len(parts) >= 2:
-                    std_name = parts[0]
-                    for alt in parts[1:]:
-                        alias_map[alt] = std_name
-                        reverse_alias[std_name].append(alt)
-
-        log.info("alias.txt: %d 条别名映射, %d 个标准名有反向索引",
-                 len(alias_map), len(reverse_alias))
-        return alias_map, reverse_alias
+        对所有存活频道，用正则+别名映射到标准名
+        直接修改 item["name"] 为
