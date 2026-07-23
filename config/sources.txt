@@ -1,12 +1,52 @@
+# ============================================================
 # IPTV 上游源列表
-# 每行一个URL
-# # 开头 = 注释（上游源标记），不会被抓取
-# 死源自动标记到 cache/dead_sources.json（7天后自动恢复）
+# # 开头 = 注释/永久排除（手动或自动）
+# 连续3次采集打不开 → 自动加 # 永久排除
+# 兼容: http/https, .m3u/.m3u8/.txt/.json/无后缀, 带参数, 带端口
+# ============================================================
 
-https://iptv-org.github.io/iptv/countries/cn.m3u
-https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u
-https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u
-https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
+# === 第一梯队：国内高质量源（央视/卫视/地方台，每6小时更新） ===
+https://live.zbds.top/tv/iptv4.txt
+https://live.zbds.top/tv/iptv6.txt
+https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
 https://live.fanmingming.com/tv/m3u/ipv6.m3u
-https://raw.githubusercontent.com/luochen1975/2026myvt/main/output/result.txt
-https://raw.githubusercontent.com/luochen1975/2026myvt/main/output/result.m3u
+https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
+https://live.hacks.tools/tv/iptv4.txt
+
+# === 第二梯队：GitHub 开源项目（直连，Actions 上稳定） ===
+https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u
+https://iptv-org.github.io/iptv/countries/cn.m3u
+https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u
+https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u
+https://raw.githubusercontent.com/zwc456baby/iptv_alive/refs/heads/master/live.m3u
+https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/main/merged_output.txt
+https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/main/others_output.txt
+https://raw.githubusercontent.com/cyh92/live/main/source/webtv.txt
+https://raw.githubusercontent.com/jn950/live/main/tv/pllive.txt
+https://raw.githubusercontent.com/jn950/live/main/tv/holive.m3u
+https://raw.githubusercontent.com/q1017673817/iptvz/refs/heads/main/zubo.txt
+https://raw.githubusercontent.com/qingtingjjjjjjj/config-tv/main/zubo_all.txt
+https://raw.githubusercontent.com/develop202/migu_video/main/interface.txt
+https://raw.githubusercontent.com/Supprise0901/TVBox_live/refs/heads/main/live.txt
+https://raw.githubusercontent.com/alantang1977/iptv-auto/refs/heads/main/my.txt
+https://raw.githubusercontent.com/alantang1977/iptvm3u/refs/heads/main/py/live.txt
+https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/gat.txt
+https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/cjdszb.txt
+https://raw.githubusercontent.com/pdd520/IPTV/refs/heads/master/config/rtp/tw.txt
+
+# === 第三梯队：iptv-api 用户输出（质量参差，引擎自动筛选） ===
+https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
+https://raw.githubusercontent.com/pdd520/iptv-api/master/output/result.txt
+https://raw.githubusercontent.com/JE668/iptv-api/master/output/result.txt
+https://raw.githubusercontent.com/laodaoxiaoge/iptv-api/refs/heads/master/output/result.txt
+
+# === 第四梯队：其他源 ===
+https://sub.ottiptv.cc/yylunbo.m3u
+https://gitee.com/mytv-android/mytvJS/raw/main/js.gitee.m3u
+https://cnb.cool/fgvss/zbds/-/git/raw/main/zbtvupan.txt
+https://l.gmbbk.com/upload/18281828.txt
+
+# === 第五梯队：IP直连/代理（不稳定，3次不可达自动排除） ===
+http://202.140.142.145:40207/zhibo/iptv.txt
+http://38.75.136.137:88/api/tvlist.php
+https://2121.ccwu.cc/
