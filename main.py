@@ -1,30 +1,51 @@
 #!/usr/bin/env python3
-"""IPTV 纯净直播源 - 入口"""
-import argparse, time, logging, sys, os
+"""IPTV 列表生成器 - 入口"""
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from engine import Engine
+import os
+import sys
+import logging
+from datetime import datetime, timezone, timedelta
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger(__name__)
+os.environ.setdefault('TZ', 'Asia/Shanghai')
+
+CST = timezone(timedelta(hours=8))
+
+
+class CSTFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=CST)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.isoformat()
+
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(CSTFormatter('%(asctime)s [%(levelname)s] %(message)s'))
+
+log = logging.getLogger("iptv")
+log.addHandler(handler)
+log.setLevel(logging.INFO)
+
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--stage", choices=["fetch","speed","output","all"], default="all")
-    args = parser.parse_args()
-    t0 = time.time()
-    e = Engine()
+    from engine import Engine
 
-    if args.stage in ("fetch", "all"):
-        e.fetch()
-    if args.stage in ("speed", "all"):
-        e.speedtest()
-    if args.stage in ("output", "all"):
-        e.categorize()
-        e.write_output()
-        e.process_epg()
+    log.info("=" * 60)
+    log.info("  IPTV 列表生成器 v2.1")
+    log.info("  时间: %s", datetime.now(CST).strftime('%Y-%m-%d %H:%M:%S CST'))
+    log.info("=" * 60)
 
-    logger.info(f"✅ 完成 {time.time()-t0:.1f}s")
+    engine = Engine()
+    engine.fetch()
+    engine.speedtest()
+    engine.categorize()
+    engine.write_output()
+    engine.process_epg()
+
+    log.info("=" * 60)
+    log.info("  全部完成！")
+    log.info("=" * 60)
+
 
 if __name__ == "__main__":
     main()
