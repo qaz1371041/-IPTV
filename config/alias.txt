@@ -1,0 +1,4 @@
+CCTV-1,CCTV1,CCTV1综合,CCTV-1综合,CCTV-1高清,央视一套,央视综合
+CCTV-2,CCTV2,CCTV2财经,CCTV-2财经,央视财经
+CCTV-3,CCTV3,CCTV3综艺,CCTV-3综艺,央视综艺
+...
