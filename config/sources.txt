@@ -2,18 +2,18 @@
 # IPTV 上游源列表
 # # 开头 = 注释/永久排除（手动或自动）
 # 连续3次采集打不开 → 自动加 # 永久排除
-# 兼容: http/https, .m3u/.m3u8/.txt/.json/无后缀, 带参数, 带端口
+# 直连 + 代理互为备份，引擎自动检测可达性
 # ============================================================
 
-# === 第一梯队：国内高质量源（央视/卫视/地方台，每6小时更新） ===
+# === 第一梯队：国内高质量源（每6小时更新，央视/卫视/地方台） ===
 https://live.zbds.top/tv/iptv4.txt
 https://live.zbds.top/tv/iptv6.txt
-https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
 https://live.fanmingming.com/tv/m3u/ipv6.m3u
-https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
 https://live.hacks.tools/tv/iptv4.txt
+https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
+https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
 
-# === 第二梯队：GitHub 开源项目（直连，Actions 上稳定） ===
+# === 第二梯队：GitHub 直连（开源项目） ===
 https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u
 https://iptv-org.github.io/iptv/countries/cn.m3u
 https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u
@@ -33,20 +33,34 @@ https://raw.githubusercontent.com/alantang1977/iptvm3u/refs/heads/main/py/live.t
 https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/gat.txt
 https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/cjdszb.txt
 https://raw.githubusercontent.com/pdd520/IPTV/refs/heads/master/config/rtp/tw.txt
+https://raw.githubusercontent.com/frxz751113/IPTVzb1/refs/heads/main/js.txt
 
-# === 第三梯队：iptv-api 用户输出（质量参差，引擎自动筛选） ===
+# === 第三梯队：iptv-api 用户输出（直连） ===
 https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
 https://raw.githubusercontent.com/pdd520/iptv-api/master/output/result.txt
 https://raw.githubusercontent.com/JE668/iptv-api/master/output/result.txt
 https://raw.githubusercontent.com/laodaoxiaoge/iptv-api/refs/heads/master/output/result.txt
 
-# === 第四梯队：其他源 ===
+# === 第四梯队：GitHub 代理（直连挂了时的备份） ===
+https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptv-auto/refs/heads/main/my.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptvm3u/refs/heads/main/py/live.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/Supprise0901/TVBox_live/main/live.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/perrsonxxa/iptv-api/master/output/user_result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/mike1996/iptv-api/refs/heads/master/output/result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/gz8482552/itv/refs/heads/master/output/result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/jia070310/lemonTV/main/iptv-fe.m3u
+https://github.boki.moe/https://raw.githubusercontent.com/frxz751113/IPTVzb1/refs/heads/main/js.txt
+https://ghfast.top/raw.githubusercontent.com/Supprise0901/TVBox_live/main/live.txt
+
+# === 第五梯队：其他源 ===
 https://sub.ottiptv.cc/yylunbo.m3u
 https://gitee.com/mytv-android/mytvJS/raw/main/js.gitee.m3u
 https://cnb.cool/fgvss/zbds/-/git/raw/main/zbtvupan.txt
 https://l.gmbbk.com/upload/18281828.txt
 
-# === 第五梯队：IP直连/代理（不稳定，3次不可达自动排除） ===
+# === 第六梯队：IP直连/特殊源（不稳定，引擎自动管理） ===
 http://202.140.142.145:40207/zhibo/iptv.txt
 http://38.75.136.137:88/api/tvlist.php
 https://2121.ccwu.cc/
