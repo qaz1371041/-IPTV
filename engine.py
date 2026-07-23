@@ -1,10 +1,14 @@
 """
-IPTV Engine v2.2
+IPTV Engine v2.3
 
-核心改动:
-  - 连续3次采集打不开 → 自动在 sources.txt 中加 # 永久排除
-  - 某次恢复可达 → 重置失败计数
-  - 兼容各种上游直播源链接格式
+修复:
+  1. 归一化增强：去掉 (720p)/(1080i)/[FHD] 等分辨率后缀
+  2. 别名双向映射：标准名↔别名 都能匹配
+  3. 反向索引：标准名→所有别名频道
+  4. 匹配引擎重写：6级精准匹配
+  5. 连续3次不可达 → 自动注释 sources.txt
+  6. 低画质过滤只针对直播源
+  7. EPG源更新
 """
 
 import os
@@ -40,13 +44,11 @@ MAX_RETRIES = 2
 RETRY_DELAY = 2
 REQUEST_JITTER = (0.1, 0.5)
 
-# 画质过滤（仅对直播源生效）
 MIN_HEIGHT = 720
 MIN_BITRATE = 1500000
 FFPROBE_TIMEOUT = 15
 
-# 源管理
-MAX_SOURCE_FAIL = 3           # 连续失败N次 → 永久注释
+MAX_SOURCE_FAIL = 3
 CACHE_TTL = 86400
 MAX_URLS_PER_CHANNEL = 3
 
@@ -64,13 +66,10 @@ log = logging.getLogger("iptv")
 HAS_FFPROBE = shutil.which("ffprobe") is not None
 
 EPG_SOURCES = [
-    "https://raw.githubusercontent.com/taksssss/tv/main/epg/112114.xml.gz",
+    "https://live.fanmingming.com/e.xml.gz",
+    "https://e.erw.cc/all.xml.gz",
+    "https://epg.51zmt.top:8000/e.xml.gz",
     "https://raw.githubusercontent.com/taksssss/tv/main/epg/51zmt.xml.gz",
-    "https://raw.githubusercontent.com/taksssss/tv/main/epg/old.xml.gz",
-    "https://raw.githubusercontent.com/taksssss/tv/main/epg/e.xml.gz",
-    "https://raw.githubusercontent.com/taksssss/tv/main/epg/e2.xml.gz",
-    "https://raw.githubusercontent.com/taksssss/tv/main/epg/e3.xml.gz",
-    "https://gitee.com/taksssss/tv/raw/main/epg/112114.xml.gz",
     "https://gitee.com/taksssss/tv/raw/main/epg/51zmt.xml.gz",
 ]
 
@@ -114,6 +113,23 @@ _NOISE_WORDS = [
     "ipv6", "ipv4", "组播", "单播",
 ]
 
+# ★ 新增：分辨率/编码后缀正则（用于归一化时清洗）
+_RES_SUFFIX_RE = re.compile(
+    r'[\s]*[\(\[（【]?\s*'
+    r'(?:'
+    r'\d{3,4}\s*[pi]'          # 720p, 1080i, 1080p, 2160p
+    r'|\d{3,4}\s*[x×*]\s*\d{3,4}'  # 1280x720, 1920×1080
+    r'|uhd|fhd|qhd|hdr|sdr'   # 编码/画质标记
+    r'|h\.?26[45]|hevc|avc'   # 编码格式
+    r'|mpeg-?[24]'
+    r'|主|备|主备|备用|主线|备线'
+    r'|ipv[46]'
+    r')'
+    r'\s*[\)\]）】]?'
+    r'[\s]*$',
+    re.IGNORECASE
+)
+
 _CN_NUM = {
     "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
     "六": "6", "七": "7", "八": "8", "九": "9", "十": "10",
@@ -122,15 +138,30 @@ _CN_NUM = {
 
 
 def _normalize_name(raw: str) -> str:
+    """
+    频道名归一化（增强版）
+    去掉分辨率后缀、噪声词、特殊符号
+    """
     n = raw.strip().lower()
     n = n.replace("＋", "+").replace("－", "-").replace("（", "(").replace("）", ")")
 
+    # 中文数字 → 阿拉伯数字
     def _cn2num(m):
         return m.group(1) + _CN_NUM.get(m.group(2), m.group(2))
-
     n = re.sub(r'(cctv|cctv-)([一二三四五六七八九十])', _cn2num, n)
+
+    # ★ 去掉分辨率/编码后缀（可多次，处理 "CCTV-3 (720p) [FHD]" 这种情况）
+    for _ in range(3):
+        new_n = _RES_SUFFIX_RE.sub('', n).strip()
+        if new_n == n:
+            break
+        n = new_n
+
+    # 去掉噪声词
     for w in _NOISE_WORDS:
         n = n.replace(w, "")
+
+    # 去掉所有特殊符号
     n = re.sub(r'[\s\-_.,:;，。：；、()\[\]【】《》"\'\"\/|\\#*！!？?@&]+', '', n)
     return n.strip()
 
@@ -189,25 +220,11 @@ def _session():
 
 
 def _is_valid_source_url(line: str) -> bool:
-    """
-    判断一行是否是有效的源URL（兼容各种格式）
-    支持:
-      - http:// / https://
-      - .m3u / .m3u8 / .txt / .json / 无后缀
-      - 带参数 ?key=value
-      - 带端口 :8080
-      - IPv4 / IPv6 地址
-      - 域名
-    """
     line = line.strip()
-    if not line:
+    if not line or line.startswith("#"):
         return False
-    if line.startswith("#"):
-        return False
-    # 必须是 http 或 https 开头
     if not re.match(r'^https?://', line, re.IGNORECASE):
         return False
-    # 基本URL结构验证
     try:
         parsed = urlparse(line)
         if not parsed.scheme or not parsed.netloc:
@@ -255,10 +272,9 @@ class Engine:
         except Exception as e:
             log.warning("缓存保存失败: %s", e)
 
-    # ==================== 源失败计数管理 ====================
+    # ==================== 源失败计数 ====================
 
     def _load_fail_count(self) -> dict:
-        """加载源连续失败计数"""
         path = os.path.join(CACHE_DIR, "source_fail_count.json")
         if os.path.exists(path):
             try:
@@ -269,35 +285,26 @@ class Engine:
         return {}
 
     def _save_fail_count(self, data: dict):
-        """保存源连续失败计数"""
         path = os.path.join(CACHE_DIR, "source_fail_count.json")
         os.makedirs(CACHE_DIR, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _comment_out_source(self, url: str):
-        """
-        在 sources.txt 中将该URL行注释掉（加 # 前缀）
-        永久排除，不会自动恢复
-        """
         path = os.path.join(CONFIG, "sources.txt")
         if not os.path.exists(path):
             return
-
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-
         new_lines = []
         commented = False
         for line in lines:
             stripped = line.strip()
-            # 精确匹配（去掉首尾空白后比较）
             if stripped == url and not commented:
                 new_lines.append(f"# [连续{MAX_SOURCE_FAIL}次不可达，自动排除] {url}\n")
                 commented = True
             else:
                 new_lines.append(line)
-
         if commented:
             with open(path, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
@@ -417,7 +424,7 @@ class Engine:
                  len(alive), cached_count, len(alive) - cached_count,
                  dead_count, fake_count)
 
-        # ffprobe 深度验证（只对直播源过滤低画质）
+        # ffprobe 深度验证
         if HAS_FFPROBE and alive:
             log.info("-" * 50)
             log.info("ffprobe 深度验证 (直播源: ≥%dp/≥%.1fMbps, 播放源: 不过滤)",
@@ -487,7 +494,7 @@ class Engine:
         self.alive = alive
         self._save_cache()
 
-    # ==================== 阶段3: 分类匹配 ====================
+    # ==================== 阶段3: 精准匹配 ====================
 
     def categorize(self):
         log.info("=" * 50)
@@ -495,11 +502,11 @@ class Engine:
         log.info("=" * 50)
 
         demo = self._load_demo()
-        alias_map = self._load_alias()
+        alias_map, reverse_alias = self._load_alias()
 
         if self.alive:
-            log.info("📊 存活频道样本 (前10):")
-            for a in self.alive[:10]:
+            log.info("📊 存活频道样本 (前15):")
+            for a in self.alive[:15]:
                 res_str = f" {a['resolution'][0]}x{a['resolution'][1]}" if a.get("resolution") else ""
                 br_str = f" {a['bitrate'] / 1_000_000:.1f}Mbps" if a.get("bitrate") else ""
                 log.info("   %s (%dms%s%s)", a["item"]["name"], a["speed"], res_str, br_str)
@@ -513,7 +520,11 @@ class Engine:
             self.classified = result
             return
 
-        exact_index, normalized_index, keyword_index = self._build_index(self.alive, alias_map)
+        # ★ 构建索引（使用双向别名）
+        exact_index, normalized_index, keyword_index = self._build_index(
+            self.alive, alias_map, reverse_alias
+        )
+
         log.info("索引: 精确=%d, 归一化=%d, 关键词=%d",
                  len(exact_index), len(normalized_index), len(keyword_index))
 
@@ -535,7 +546,8 @@ class Engine:
             seen_in_group.add(name)
 
             url, match_type = self._match_channel(
-                name, alias_map, exact_index, normalized_index, keyword_index
+                name, alias_map, reverse_alias,
+                exact_index, normalized_index, keyword_index
             )
 
             if url:
@@ -557,7 +569,7 @@ class Engine:
 
         if misses:
             log.warning("未匹配频道 (%d): %s", len(misses),
-                        ", ".join(misses[:20]) + ("..." if len(misses) > 20 else ""))
+                        ", ".join(misses[:30]) + ("..." if len(misses) > 30 else ""))
 
     # ==================== 阶段4: 输出 ====================
 
@@ -640,17 +652,9 @@ class Engine:
         total = sum(len(re.findall(r'<programme ', t)) for t in all_texts)
         log.info("✅ EPG: %d 条 → %s", total, epg_path)
 
-    # ==================== 源加载（核心改动） ====================
+    # ==================== 源加载 ====================
 
     def _load_sources(self) -> list:
-        """
-        加载 sources.txt，检测可达性
-        规则:
-          - # 开头 = 注释/永久排除，跳过
-          - 连续 MAX_SOURCE_FAIL 次不可达 → 自动加 # 永久注释
-          - 某次可达 → 重置失败计数
-          - 兼容各种URL格式
-        """
         path = os.path.join(CONFIG, "sources.txt")
         if not os.path.exists(path):
             log.error("config/sources.txt 不存在!")
@@ -659,7 +663,6 @@ class Engine:
         with open(path, encoding="utf-8") as f:
             lines = f.readlines()
 
-        # 加载失败计数
         fail_count = self._load_fail_count()
         session = _session()
         alive_sources = []
@@ -669,108 +672,64 @@ class Engine:
 
         for line in lines:
             stripped = line.strip()
-
-            # 空行或 # 开头 → 跳过（永久排除）
             if not stripped or stripped.startswith("#"):
                 continue
-
-            # 验证URL格式（兼容各种链接）
             if not _is_valid_source_url(stripped):
                 log.warning("  ⚠️ 无效URL格式，跳过: %s", stripped[:60])
                 continue
 
-            # 实际检测可达性
             if self._check_source_alive(stripped, session):
-                # ✅ 可达 → 重置计数
                 alive_sources.append(stripped)
                 if stripped in fail_count:
                     log.info("  ✅ %s (恢复可达，重置计数)", stripped[:60])
                 else:
                     log.info("  ✅ %s", stripped[:60])
-                # 不写入 new_fail_count = 重置为0
             else:
-                # ❌ 不可达 → 计数+1
                 count = fail_count.get(stripped, 0) + 1
                 new_fail_count[stripped] = count
-
                 if count >= MAX_SOURCE_FAIL:
-                    # 达到阈值 → 永久注释
                     log.warning("  🔒 %s (连续%d次不可达，永久排除)",
                                 stripped[:60], count)
                     self._comment_out_source(stripped)
-                    # 注释后从计数中移除（不再跟踪）
                     del new_fail_count[stripped]
                 else:
                     log.warning("  ❌ %s (第%d/%d次不可达)",
                                 stripped[:60], count, MAX_SOURCE_FAIL)
 
-        # 保存更新后的计数（只保留未达阈值的）
         self._save_fail_count(new_fail_count)
-
         log.info("源检测完成: ✅可达 %d 个", len(alive_sources))
         return alive_sources
 
     def _check_source_alive(self, url, session) -> bool:
-        """
-        检测源是否可达（兼容各种格式）
-        - http/https
-        - .m3u / .m3u8 / .txt / .json / 无后缀
-        - 带参数、带端口、IPv6
-        """
         try:
             resp = session.get(url, timeout=TIMEOUT, stream=True)
-
-            # 状态码检查
             if resp.status_code != 200:
                 resp.close()
                 return False
-
             content_type = resp.headers.get('Content-Type', '').lower()
-
-            # 读取前 4KB 判断内容
             chunk = resp.raw.read(4096)
             resp.close()
-
             if len(chunk) < 10:
                 return False
-
-            # 如果明确是 HTML 错误页
             if 'text/html' in content_type:
                 text = chunk.decode('utf-8', errors='ignore').lower()
                 if any(x in text for x in ['<!doctype', '<html', '404 not found',
                                             '403 forbidden', 'access denied']):
                     return False
-
-            # 检查是否包含有效内容特征
             text = chunk.decode('utf-8', errors='ignore')
-
-            # m3u/m3u8 特征
             if '#EXTM3U' in text or '#EXTINF' in text or '#EXT-X-' in text:
                 return True
-
-            # txt 格式特征（频道名,URL）
             if ',http' in text or ',#genre#' in text:
                 return True
-
-            # JSON 格式
             if text.strip().startswith('{') or text.strip().startswith('['):
                 return True
-
-            # 有足够数据量（可能是二进制或其他格式）
             if len(chunk) > 100:
                 return True
-
-            return False
-
-        except requests.exceptions.Timeout:
-            return False
-        except requests.exceptions.ConnectionError:
             return False
         except Exception:
             return False
 
     def _fetch_source(self, url, session):
-        """获取源内容（带重试）"""
         for attempt in range(MAX_RETRIES + 1):
             try:
                 time.sleep(random.uniform(*REQUEST_JITTER))
@@ -895,10 +854,8 @@ class Engine:
         resp = session.get(url, timeout=TIMEOUT)
         resp.raise_for_status()
         content = resp.text
-
         if '#EXTM3U' not in content and '#EXTINF' not in content:
             return (item, -1, "fake")
-
         if '#EXT-X-STREAM-INF' in content:
             sub_url = self._extract_sub_playlist(content, url)
             if not sub_url:
@@ -909,11 +866,9 @@ class Engine:
                 content = resp.text
             except Exception:
                 return (item, -1, "dead")
-
         ts_url = self._extract_first_ts(content, url)
         if not ts_url:
             return (item, -1, "fake")
-
         try:
             ts_resp = session.get(ts_url, timeout=TIMEOUT, stream=True)
             ts_resp.raise_for_status()
@@ -932,7 +887,6 @@ class Engine:
         resp = session.get(url, timeout=TIMEOUT, stream=True)
         resp.raise_for_status()
         content_type = resp.headers.get('Content-Type', '').lower()
-
         if 'text/html' in content_type:
             data = resp.raw.read(512)
             resp.close()
@@ -940,7 +894,6 @@ class Engine:
                 speed = round((time.time() - t0) * 1000)
                 return (item, speed, "alive")
             return (item, -1, "fake")
-
         data = resp.raw.read(65536)
         resp.close()
         if not data or len(data) < 188:
@@ -1012,28 +965,55 @@ class Engine:
         except (subprocess.TimeoutExpired, Exception):
             return None
 
-    # ==================== 匹配索引 ====================
+    # ==================== ★ 匹配索引（重写） ====================
 
-    def _build_index(self, alive_list, alias_map):
+    def _build_index(self, alive_list, alias_map, reverse_alias):
+        """
+        构建多级匹配索引（双向别名版）
+
+        alias_map:     别名 → 标准名  (如 "CCTV9" → "CCTV-9")
+        reverse_alias: 标准名 → [别名列表]  (如 "CCTV-9" → ["CCTV9", "央视九套", ...])
+        """
         exact_index = {}
         normalized_index = {}
         keyword_index = defaultdict(list)
 
         for a in alive_list:
             name = a["item"]["name"]
-            std_name = alias_map.get(name, name)
             url = a["item"]["url"]
             speed = a["speed"]
+
+            # 通过别名映射到标准名
+            std_name = alias_map.get(name, name)
+
             data = {"url": url, "speed": speed, "name": std_name, "orig_name": name}
 
-            for key in set([std_name, name]):
+            # ★ 精确索引：标准名 + 原始名 + 所有别名变体
+            keys = set([std_name, name])
+            # 如果原始名是某个标准名的别名，也把标准名加入
+            if name in alias_map:
+                keys.add(alias_map[name])
+            # 如果标准名有反向别名，也加入
+            if std_name in reverse_alias:
+                for alt in reverse_alias[std_name]:
+                    keys.add(alt)
+
+            for key in keys:
                 if key not in exact_index or speed < exact_index[key]["speed"]:
                     exact_index[key] = data
 
-            for key in set([_normalize_name(std_name), _normalize_name(name)]):
-                if key and (key not in normalized_index or speed < normalized_index[key]["speed"]):
-                    normalized_index[key] = data
+            # ★ 归一化索引：所有变体都归一化
+            norm_keys = set()
+            for key in keys:
+                nk = _normalize_name(key)
+                if nk:
+                    norm_keys.add(nk)
 
+            for nk in norm_keys:
+                if nk not in normalized_index or speed < normalized_index[nk]["speed"]:
+                    normalized_index[nk] = data
+
+            # 关键词索引
             norm = _normalize_name(std_name)
             m = re.search(r'(cctv\d+\+?)', norm)
             if m:
@@ -1055,28 +1035,45 @@ class Engine:
 
         return exact_index, normalized_index, keyword_index
 
-    def _match_channel(self, demo_name, alias_map, exact_index, normalized_index, keyword_index):
-        # Level 1: 精确
+    def _match_channel(self, demo_name, alias_map, reverse_alias,
+                       exact_index, normalized_index, keyword_index):
+        """
+        6级精准匹配引擎（双向别名版）
+        """
+        # Level 1: 精确匹配（demo名直接在索引中）
         if demo_name in exact_index:
             return exact_index[demo_name]["url"], "exact"
 
-        # Level 2: 别名→精确
+        # Level 2: demo名是标准名 → 查反向别名 → 在索引中找
+        if demo_name in reverse_alias:
+            for alt in reverse_alias[demo_name]:
+                if alt in exact_index:
+                    return exact_index[alt]["url"], "alias"
+
+        # Level 3: demo名是别名 → 映射到标准名 → 在索引中找
         aliased = alias_map.get(demo_name)
         if aliased and aliased in exact_index:
             return exact_index[aliased]["url"], "alias"
 
-        # Level 3: 归一化
+        # Level 4: 归一化匹配
         norm = _normalize_name(demo_name)
         if norm and norm in normalized_index:
             return normalized_index[norm]["url"], "normalized"
 
-        # Level 4: 别名归一化
+        # Level 5: 别名归一化
         if aliased:
             norm_alias = _normalize_name(aliased)
             if norm_alias and norm_alias in normalized_index:
                 return normalized_index[norm_alias]["url"], "alias+normalized"
 
-        # Level 5: 关键词（相似度>40%）
+        # Level 5b: 反向别名归一化
+        if demo_name in reverse_alias:
+            for alt in reverse_alias[demo_name]:
+                norm_alt = _normalize_name(alt)
+                if norm_alt and norm_alt in normalized_index:
+                    return normalized_index[norm_alt]["url"], "alias+normalized"
+
+        # Level 6: 关键词匹配（相似度>40%）
         m = re.search(r'(cctv\d+\+?)', norm)
         if m:
             kw = m.group(1)
@@ -1120,7 +1117,6 @@ class Engine:
         if not os.path.exists(path):
             log.warning("config/demo.txt 不存在")
             return []
-
         entries = []
         group = ""
         with open(path, encoding="utf-8") as f:
@@ -1137,7 +1133,6 @@ class Engine:
                     name = line.strip()
                 if name:
                     entries.append({"name": name, "url": "", "group": group})
-
         log.info("demo.txt 加载: %d 个频道模板", len(entries))
         if entries:
             groups = list(dict.fromkeys(e["group"] for e in entries))
@@ -1148,12 +1143,18 @@ class Engine:
         """
         加载 alias.txt（Guovin/iptv-api 格式）
         格式: 标准名,别名1,别名2,...
+
+        返回:
+          alias_map:     别名 → 标准名
+          reverse_alias: 标准名 → [别名列表]
         """
         path = os.path.join(CONFIG, "alias.txt")
         alias_map = {}
+        reverse_alias = defaultdict(list)
+
         if not os.path.exists(path):
             log.warning("config/alias.txt 不存在")
-            return alias_map
+            return alias_map, reverse_alias
 
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -1165,7 +1166,8 @@ class Engine:
                     std_name = parts[0]
                     for alt in parts[1:]:
                         alias_map[alt] = std_name
-                        alias_map[_normalize_name(alt)] = std_name
+                        reverse_alias[std_name].append(alt)
 
-        log.info("alias.txt: %d 条别名映射", len(alias_map))
-        return alias_map
+        log.info("alias.txt: %d 条别名映射, %d 个标准名有反向索引",
+                 len(alias_map), len(reverse_alias))
+        return alias_map, reverse_alias
