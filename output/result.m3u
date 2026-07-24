@@ -1,0 +1,505 @@
+#EXTM3U
+#EXTINF:-1 group-title="📺央视频道",CCTV-1 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CCTV-2 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-2 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-3 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-4 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-4 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-4 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-5+ | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-6 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-6 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CCTV-6 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-7 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-7 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-7 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-8 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-8 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-8 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-8 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-9 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-9 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-9 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-12 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-12 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CCTV-13 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-14 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-16 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV-16 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CCTV-17 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CETV-1 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="📺央视频道",CETV-2 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CETV-3 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="📺央视频道",CETV-4 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CETV-4 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV2财经 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV2财经 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV2财经 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0002_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4中文国际 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4中文国际 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0014_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4中文国际 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV8电视剧 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV9纪录 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV9纪录 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV12社会与法 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV13新闻 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4欧洲 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4欧洲 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4欧洲 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4欧洲 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4美洲 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4美洲 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="📺央视频道",CCTV4美洲 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="💰央视付费频道",电视指南 | 1280x720
+https://gcalic.v.myalicdn.com/gc/ztn_1/index.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-02咪咕 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-03咪咕 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-04咪咕 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-06咪咕 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-06咪咕 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-08咪咕 | 1920x1080
+http://112.27.235.94:8000/hls/9/index.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-09咪咕 | 1280x720
+http://74.91.26.218:82/live/cctv9hd.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-09咪咕 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-11咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0011_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-12咪咕 | 1280x720
+http://74.91.26.218:82/live/cctv12hd.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-12咪咕
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-12咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0002_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-13咪咕 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel21/1080p.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-14咪咕 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-14咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0014_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-15咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0005_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-16咪咕
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-16咪咕 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0014_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0014_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4欧洲咪咕 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4美洲咪咕 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV4美洲咪咕 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0014_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-4咪咕欧洲 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-4咪咕美洲 | 1280x720
+https://dash2.antik.sk/live/test_cctv_tizen/playlist.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-4咪咕美洲 | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-16咪咕
+http://drive.mxmy.net:8888/udp/239.3.1.184:8001
+#EXTINF:-1 group-title="🍉┃咪咕频道",CCTV-16咪咕 | 1280x720
+http://198.204.240.250:82/live/cctv6.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT西语咪咕 | 1920x1080
+https://0472.org/hls/cgtnx.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT西语咪咕 | 1920x1080
+https://0472.org/hls/cgtnx.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT西语咪咕 | 1920x1080
+https://0472.org/hls/cgtnx.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT西语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT西语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT阿语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT阿语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT阿语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT阿语咪咕 | 1920x1080
+https://0472.org/hls/cgtnx.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT阿语咪咕 | 1920x1080
+https://0472.org/hls/cgtnx.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT法语咪咕 | 1920x1080
+https://0472.org/hls/cgtnf.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT法语咪咕 | 1920x1080
+https://0472.org/hls/cgtnf.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT法语咪咕 | 1920x1080
+https://0472.org/hls/cgtnf.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT法语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",CGT法语咪咕 | 1920x1080
+https://0472.org/hls/cgtna.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",东方卫视咪咕 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="🍉┃咪咕频道",东方卫视咪咕 | 1920x1080
+https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",江苏卫视咪咕 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="🍉┃咪咕频道",湖北卫视咪咕 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",湖北卫视4K | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",湖北新闻综合 | 1280x720
+http://hzcm-live.media.hugd.com/3f5fa7d64c7c46a38c6bd8ad35e836cc/65128273761b4731ae53729ea6dcf932.m3u8?auth_key=2277598215-9d21c15111244bea8d298c361d31a72e-0-d031198f58d44b0e91ba2e3f3b188865
+#EXTINF:-1 group-title="☘️湖北频道",湖北新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",湖北新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXpinghu1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",湖北新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",湖北新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",湖北综合 | 1280x720
+http://hzcm-live.media.hugd.com/3f5fa7d64c7c46a38c6bd8ad35e836cc/65128273761b4731ae53729ea6dcf932.m3u8?auth_key=2277598215-9d21c15111244bea8d298c361d31a72e-0-d031198f58d44b0e91ba2e3f3b188865
+#EXTINF:-1 group-title="☘️湖北频道",湖北综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXpinghu1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",湖北公共新闻 | 1920x1080
+https://ali-m-l.cztv.com/channels/lantian/channel007/1080p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",湖北公共 | 1280x720
+http://hzcm-live.media.hugd.com/1e6b554b9ab74513958c0e1ffe664d22/9acaa7634309494cb29a85eb12136607.m3u8?auth_key=2272900830-9a2389b8bf4e49d580d4ad807423d326-0-ea78a5c7a678c436263582d368f5009e
+#EXTINF:-1 group-title="☘️湖北频道",武汉一台新闻综合
+https://ls.qingting.fm/live/20198/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉一台新闻综合 | 1280x720
+http://uzoiczhh.live.sxmty.com/live/hls/0d41f1480c4042d49927858f01fde707/53130407737b417b9a6259b57246bae3.m3u8?zshanxd
+#EXTINF:-1 group-title="☘️湖北频道",武汉1新闻综合
+https://ls.qingting.fm/live/20198/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉1新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",武汉1新闻综合 | 1280x720
+http://uzoiczhh.live.sxmty.com/live/hls/0d41f1480c4042d49927858f01fde707/53130407737b417b9a6259b57246bae3.m3u8?zshanxd
+#EXTINF:-1 group-title="☘️湖北频道",武汉1新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉新闻综合
+https://ls.qingting.fm/live/20198/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉新闻综合 | 1280x720
+http://uzoiczhh.live.sxmty.com/live/hls/0d41f1480c4042d49927858f01fde707/53130407737b417b9a6259b57246bae3.m3u8?zshanxd
+#EXTINF:-1 group-title="☘️湖北频道",武汉新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",江夏经济生活 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel03/1080p.m3u8#https://ali-m-l.cztv.com/channels/lantian/channel003/1080p.m3u8#http://ali-m-l.cztv.com/channels/lantian/channel003/1080p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",江夏经济生活 | 1920x1080
+http://ali-m-l.cztv.com/channels/lantian/channel003/1080p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",江夏经济生活 | 1920x1080
+https://ali-m-l.cztv.com/channels/lantian/channel003/1080p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",江夏经济生活 | 1920x1080
+https://ali-m-l.cztv.com/channels/lantian/channel003/1080p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",江夏新闻综合 | 1920x1080
+http://cm-wshls.homecdn.com/live/2aa50.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",江夏新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXqujiang1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",崇阳新闻综合
+https://ls.qingting.fm/live/5043/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",崇阳新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",崇阳新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",崇阳新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",保康新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",保康新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",保康新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",仙桃新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",仙桃新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",仙桃新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",郧阳新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",郧阳新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",郧阳新闻综合
+https://ls.qingting.fm/live/5043/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",郧阳新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+http://stream.jmtv.com.cn/xwzh/sd/live.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",云梦综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXjinyun1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",云梦综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXjinyun1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",云梦综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXyunhe1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",云梦综合 | 1920x1080
+https://live.zzyxxw.com:2443/live/xwzh.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",武汉新闻
+https://ls.qingting.fm/live/20198/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+http://stream.jmtv.com.cn/xwzh/sd/live.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+https://m3u8channel.yunxya.com/nmip-media/channellive/channel100028/playlist.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXlongquan1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",荆门新闻综合 | 1280x720
+http://l.cztvcloud.com/channels/lantian/SXlongyou1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="☘️湖北频道",崇阳综合
+https://ls.qingting.fm/live/5043/64k.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",崇阳综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXsongyang1/720p.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",潜江综合 | 1920x1080
+http://cm-wshls.homecdn.com/live/2aa50.m3u8
+#EXTINF:-1 group-title="☘️湖北频道",潜江综合 | 1920x1080
+http://l.cztvcloud.com/channels/lantian/SXqujiang1/720p.m3u8?zzhed
+#EXTINF:-1 group-title="📡卫视频道",广东卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视频道",广东卫视 | 1920x1080
+https://hlscdn.liangtv.cn/live/de0f97348eb84f62aa6b7d8cf0430770/dd505d87880c478f901f38560ca4d4e6.m3u8
+#EXTINF:-1 group-title="📡卫视频道",浙江卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视频道",浙江卫视 | 1280x720
+http://ali-m-l.cztv.com/channels/lantian/channel003/720p.m3u8
+#EXTINF:-1 group-title="📡卫视频道",湖南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视频道",湖北卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视频道",黑龙江卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视频道",安徽卫视 | 1920x1080
+http://112.27.235.94:8000/hls/26/index.m3u8
+#EXTINF:-1 group-title="📡卫视频道",安徽卫视 | 1920x1080
+http://dspdhls.appcoo.com:8888/live/dspd/index.m3u8
+#EXTINF:-1 group-title="📡卫视频道",安徽卫视 | 1920x1080
+https://liveout.xntv.tv/a65jur/96iln2.m3u8
+#EXTINF:-1 group-title="📡卫视频道",东方卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视频道",东方卫视 | 1920x1080
+https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
+#EXTINF:-1 group-title="📡卫视频道",东南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视频道",甘肃卫视 | 1920x1080
+http://live.zohi.tv/video/s10001-fztv-3/index.m3u8
+#EXTINF:-1 group-title="📡卫视频道",广西卫视 | 1920x1080
+https://hlscdn.liangtv.cn/live/de0f97348eb84f62aa6b7d8cf0430770/dd505d87880c478f901f38560ca4d4e6.m3u8
+#EXTINF:-1 group-title="📡卫视频道",贵州卫视 | 1920x1080
+http://222.169.85.8:9901/tsfile/live/0120_1.m3u8
+#EXTINF:-1 group-title="📡卫视频道",海南卫视 | 1920x1080
+http://111.221.137.234:44330/tsfile/live/0117_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="📡卫视频道",河南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视频道",江苏卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视频道",辽宁卫视 | 1920x1080
+http://cssbyd.imwork.net:8082/hls/45/index.m3u8
+#EXTINF:-1 group-title="📡卫视频道",内蒙古卫视 | 1920x1080
+http://222.134.245.16:9901/tsfile/live/0109_1.m3u8
+#EXTINF:-1 group-title="📡卫视频道",青海卫视 | 1920x1080
+http://38.64.72.148:80/hls/modn/list/4009/playlist.m3u8
+#EXTINF:-1 group-title="📡卫视频道",青海卫视 | 1920x1080
+http://111.221.137.234:44330/tsfile/live/0117_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="📡卫视频道",山东卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视频道",山西卫视 | 1920x1080
+http://119.39.9.8:9901/tsfile/live/0118_1.m3u8
+#EXTINF:-1 group-title="📡卫视频道",陕西卫视 | 1920x1080
+http://cssbyd.imwork.net:8082/hls/46/index.m3u8
+#EXTINF:-1 group-title="📡卫视频道",新疆卫视 | 1920x1080
+http://218.84.12.186:8001/hls/main/playlist.m3u8?zxinjd;http://218.84.12.186:8001/hls/main/playlist.m3u8zxinjd
+#EXTINF:-1 group-title="📡卫视频道",云南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视频道",云南卫视 | 1920x1080
+http://59.39.89.130:60901/tsfile/live/0125_18.m3u8?key=txiptv&playlive=1&authid=0
+#EXTINF:-1 group-title="🌊港·澳·台",纬来体育 | 1280x720
+https://epg.pw/stream/8855a9936e37e608a0ec8a014cce1673dee9c5d68d560da376cc92e5edef2b25.m3u8
+#EXTINF:-1 group-title="🌊港·澳·台",纬来育乐 | 1280x720
+https://epg.pw/stream/8855a9936e37e608a0ec8a014cce1673dee9c5d68d560da376cc92e5edef2b25.m3u8
+#EXTINF:-1 group-title="🌊港·澳·台",三立新闻
+https://ls.qingting.fm/live/5022100/64k.m3u8
+#EXTINF:-1 group-title="🌊港·澳·台",东森综合 | 1280x720
+https://stream.sun0769.com/dgrtv1/mp4tv1_800/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1280x720
+http://ali-m-l.cztv.com/channels/lantian/channel003/720p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1280x720
+http://ali-m-l.cztv.com/channels/lantian/channel003/720p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",江苏卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",江苏卫视 | 1920x1080
+http://218.13.170.98:9901/tsfile/live/1003_1.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",湖南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",广东卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视咪咕",广东卫视 | 1920x1080
+https://hlscdn.liangtv.cn/live/de0f97348eb84f62aa6b7d8cf0430770/dd505d87880c478f901f38560ca4d4e6.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+http://dspdhls.appcoo.com:8888/live/dspd/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+http://112.27.235.94:8000/hls/26/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+https://liveout.xntv.tv/a65jur/96iln2.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",山东卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视咪咕",山西卫视 | 1920x1080
+http://119.39.9.8:9901/tsfile/live/0118_1.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",河南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",湖北卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",广西卫视 | 1920x1080
+https://hlscdn.liangtv.cn/live/de0f97348eb84f62aa6b7d8cf0430770/dd505d87880c478f901f38560ca4d4e6.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",湾区卫视 | 1920x1080
+http://222.128.55.152:9080/live/dwq.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",云南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",云南卫视 | 1920x1080
+http://59.39.89.130:60901/tsfile/live/0125_18.m3u8?key=txiptv&playlive=1&authid=0
+#EXTINF:-1 group-title="📡卫视咪咕",东南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",海南卫视 | 1920x1080
+http://111.221.137.234:44330/tsfile/live/0117_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="📡卫视咪咕",青海卫视 | 1920x1080
+http://38.64.72.148:80/hls/modn/list/4009/playlist.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",青海卫视 | 1920x1080
+http://111.221.137.234:44330/tsfile/live/0117_1.m3u8?key=txiptv&playlive=0&authid=0
+#EXTINF:-1 group-title="📡卫视咪咕",甘肃卫视 | 1920x1080
+http://live.zohi.tv/video/s10001-fztv-3/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",新疆卫视 | 1920x1080
+http://218.84.12.186:8001/hls/main/playlist.m3u8?zxinjd;http://218.84.12.186:8001/hls/main/playlist.m3u8zxinjd
+#EXTINF:-1 group-title="📡卫视咪咕",西藏卫视 | 1920x1080
+http://cssbyd.imwork.net:8082/hls/46/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",黑龙江视
+https://ls.qingting.fm/live/4974/64k.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",东方卫视 | 1280x720 | 2053kbps
+https://txmov2.a.kwimgs.com/upic/2023/01/26/09/BMjAyMzAxMjYwOTE3NDVfNzM5MzQzNzIyXzk0NjI1OTUwNTA3XzBfMw==_b_B81ddda927d33445d544befd008e60109.mp4
+#EXTINF:-1 group-title="📡卫视咪咕",东方卫视 | 1920x1080
+https://bp-resource-dfl.bestv.cn/148/3/video.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1280x720
+http://ali-m-l.cztv.com/channels/lantian/channel003/720p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",浙江卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",江苏卫视 | 1920x1080
+http://ali-m-l.cztv.com:80/channels/lantian/channel001/1080p.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",江苏卫视 | 1920x1080
+http://218.13.170.98:9901/tsfile/live/1003_1.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",湖南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+http://dspdhls.appcoo.com:8888/live/dspd/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+http://112.27.235.94:8000/hls/26/index.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",安徽卫视 | 1920x1080
+https://liveout.xntv.tv/a65jur/96iln2.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",东南卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="📡卫视咪咕",湖北卫视 | 3840x2160
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 group-title="🎬电影频道",刘德华 | 1280x720 | 4096kbps
+http://live.metshop.top/huya/11342424?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",功夫片 | 1280x720 | 1382kbps
+http://live.metshop.top/huya/11352941?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",高分动作 | 1280x720 | 1378kbps
+http://live.metshop.top/huya/11352884?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",周星星 | 1280x720 | 4096kbps
+http://live.metshop.top/huya/11336587?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",梁家辉 | 1280x720 | 848kbps
+http://live.metshop.top/huya/11342429?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",嫣然影厅 | 1280x720 | 1331kbps
+http://live.metshop.top/huya/11601977?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",搞笑喜剧 | 1280x720 | 3898kbps
+http://live.metshop.top/huya/11342423?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",刘德华 | 1280x720 | 4096kbps
+http://live.metshop.top/huya/11342424?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",梁家辉 | 1280x720 | 848kbps
+http://live.metshop.top/huya/11342429?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",犯罪片系列 | 1920x1080 | 1528kbps
+http://live.metshop.top/huya/11352974?cdn=alicdn
+#EXTINF:-1 group-title="🎬电影频道",谍战片系列 | 1920x1080 | 2675kbps
+http://live.metshop.top/huya/21059587?cdn=alicdn
+#EXTINF:-1 group-title="🏍咪咕体育",山东体育 | 1280x720
+https://test1.live.sdetv.com.cn/live/dianshizhibo/playlist.m3u8
+#EXTINF:-1 group-title="🏍咪咕体育",体育 | 1280x720
+https://epg.pw/stream/94ed0232b61ce8d89883160a4cdfbfc8f3225cae70ef8e17d93eec249a3c8ad6.m3u8
+#EXTINF:-1 group-title="🏍咪咕体育",体育 | 1280x720
+https://epg.pw/stream/8855a9936e37e608a0ec8a014cce1673dee9c5d68d560da376cc92e5edef2b25.m3u8
+#EXTINF:-1 group-title="🏍咪咕体育",快乐垂钓 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.164:8001
+#EXTINF:-1 group-title="🏀体育频道",CCTV-5+ | 3840x2160
+http://vip1.xinketongxun.fun:8082/tsfile/live/1026_1.m3u8
+#EXTINF:-1 group-title="🏀体育频道",纬来体育 | 1280x720
+https://epg.pw/stream/8855a9936e37e608a0ec8a014cce1673dee9c5d68d560da376cc92e5edef2b25.m3u8
+#EXTINF:-1 group-title="🏀体育频道",精品体育 | 1280x720
+https://epg.pw/stream/94ed0232b61ce8d89883160a4cdfbfc8f3225cae70ef8e17d93eec249a3c8ad6.m3u8
+#EXTINF:-1 group-title="🏀体育频道",山东体育 | 1280x720
+https://test1.live.sdetv.com.cn/live/dianshizhibo/playlist.m3u8
+#EXTINF:-1 group-title="🏀体育频道",快乐垂钓 | 1920x1080
+http://drive.mxmy.net:8888/udp/239.3.1.164:8001
