@@ -1,10 +1,56 @@
-# 上游直播源列表（每行一个URL）
-# 失效源会被程序自动加 # 标记
+# ==========================================
+# -IPTV 上游直播源列表
+# 每行一个URL，失效源会被程序自动加 # 标记
+# ==========================================
 
-https://iptv-org.github.io/iptv/countries/cn.m3u
+# ===== 知名大源 (iptv-org / fanmingming) =====
+https://raw.githubusercontent.com/iptv-org/iptv/gh-pages/countries/cn.m3u
+https://raw.githubusercontent.com/iptv-org/iptv/master/streams/cn.m3u
 https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u
-https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv4.m3u
-https://live.fanmingming.com/tv/m3u/ipv6.m3u
-https://live.fanmingming.com/tv/m3u/ipv4.m3u
-https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv6.m3u
-https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u
+https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u
+https://raw.githubusercontent.com/zwc456baby/iptv_alive/refs/heads/master/live.m3u
+
+# ===== 个人整合源 (直链) =====
+https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
+https://raw.githubusercontent.com/q1017673817/iptvz/refs/heads/main/zubo.txt
+https://raw.githubusercontent.com/qingtingjjjjjjj/config-tv/main/zubo_all.txt
+https://raw.githubusercontent.com/cyh92/live/main/source/webtv.txt
+https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/gat.txt
+https://raw.githubusercontent.com/zxmlxw520/5566/refs/heads/main/cjdszb.txt
+https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/main/merged_output.txt
+https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/main/others_output.txt
+
+# ===== 个人整合源 (需要 GitHub 代理，本地运行推荐) =====
+https://github.boki.moe/https://raw.githubusercontent.com/frxz751113/IPTVzb1/refs/heads/main/js.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptv-auto/refs/heads/main/my.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptvm3u/refs/heads/main/py/live.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/perrsonxxa/iptv-api/master/output/user_result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/mike1996/iptv-api/refs/heads/master/output/result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/gz8482552/itv/refs/heads/master/output/result.txt
+https://gh-proxy.org/https://raw.githubusercontent.com/jia070310/lemonTV/main/iptv-fe.m3u
+https://ghfast.top/raw.githubusercontent.com/Supprise0901/TVBox_live/main/live.txt
+
+# ===== iptv-api 类项目输出结果 =====
+https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
+https://raw.githubusercontent.com/pdd520/iptv-api/master/output/result.txt
+https://raw.githubusercontent.com/JE668/iptv-api/master/output/result.txt
+https://raw.githubusercontent.com/laodaoxiaoge/iptv-api/refs/heads/master/output/result.txt
+
+# ===== 其他独立直播源 =====
+https://live.zbds.top/tv/iptv4.txt
+https://live.zbds.top/tv/iptv6.txt
+https://live.hacks.tools/tv/iptv4.txt
+https://sub.ottiptv.cc/yylunbo.m3u
+https://gitee.com/mytv-android/mytvJS/raw/main/js.gitee.m3u
+https://l.gmbbk.com/upload/18281828.txt
+https://cnb.cool/fgvss/zbds/-/git/raw/main/zbtvupan.txt
+
+# ===== 地方/特定源 =====
+https://raw.githubusercontent.com/jn950/live/main/tv/pllive.txt
+https://raw.githubusercontent.com/jn950/live/refs/heads/main/tv/pllive.txt
+https://raw.githubusercontent.com/jn950/live/main/tv/holive.m3u
+https://raw.githubusercontent.com/develop202/migu_video/main/interface.txt
+https://raw.githubusercontent.com/pdd520/IPTV/refs/heads/master/config/rtp/tw.txt
+http://202.140.142.145:40207/zhibo/iptv.txt
