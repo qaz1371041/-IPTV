@@ -1,41 +1,34 @@
-name: IPTV Auto Update
+name: Auto Update IPTV
 
 on:
-  # 允许在 Actions 页面手动点击运行
-  workflow_dispatch:
-  # 定时运行：每天北京时间 08:00 和 20:00 (对应 UTC 00:00 和 12:00)
   schedule:
-    - cron: '0 0 * * *'
-    - cron: '0 12 * * *'
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
-    
     steps:
-    # 1. 签出代码
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # 2. 安装 Python
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    # 3. 安装依赖
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-    # 4. 运行主程序
-    - name: Run IPTV Engine
-      run: python main.py
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    # 5. 自动提交结果到仓库
-    - name: Commit and push results
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        git add output/
-        git diff --staged --quiet || git commit -m "🤖 Auto update IPTV $(date +'%Y-%m-%d %H:%M')"
-        git push
+      - name: Run
+        run: python main.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/ config/sources.txt
+          git diff --cached --quiet || git commit -m "🔄 Update: $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
