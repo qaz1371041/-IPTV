@@ -22,7 +22,6 @@ https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/main/others_output.
 
 # ===== 个人整合源 (需要 GitHub 代理，本地运行推荐) =====
 https://github.boki.moe/https://raw.githubusercontent.com/frxz751113/IPTVzb1/refs/heads/main/js.txt
-# https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptv-auto/refs/heads/main/my.txt  # [失效] 自动标记
 https://gh-proxy.org/https://raw.githubusercontent.com/alantang1977/iptvm3u/refs/heads/main/py/live.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
