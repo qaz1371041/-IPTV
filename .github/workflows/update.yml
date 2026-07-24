@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests m3u8 urllib3 fuzzywuzzy python-Levenshtein
+        run: pip install requests m3u8 urllib3
 
       - name: Run update
         run: python src/main.py
