@@ -1,7 +1,7 @@
 # 上游直播源直链（每行一个 URL，支持 M3U / TXT 格式）
 # 以 # 开头的行会被忽略（死链会自动被加上 # [DEAD] 标记）
 
-http://202.140.142.145:40207/zhibo/iptv.txt
+# [DEAD] http://202.140.142.145:40207/zhibo/iptv.txt
 https://ghfast.top/raw.githubusercontent.com/Supprise0901/TVBox_live/main/live.txt
 https://raw.githubusercontent.com/q1017673817/iptvz/refs/heads/main/zubo.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/jn950/live/main/tv/pllive.txt
@@ -10,7 +10,7 @@ https://gh-proxy.org/https://raw.githubusercontent.com/develop202/migu_video/ref
 https://gh-proxy.com/raw.githubusercontent.com/SarinV/My-TV/main/my_tv.m3u
 https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
 https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
-http://202.140.142.145:40207/zhibo/iptv.txt
+# [DEAD] http://202.140.142.145:40207/zhibo/iptv.txt
 https://live.hacks.tools/tv/iptv4.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/mike1996/iptv-api/refs/heads/master/output/result.txt
