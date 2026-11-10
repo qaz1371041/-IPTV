@@ -1,0 +1,85 @@
+name: IPTV Auto Update
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write  # ★ 必须添加此权限，否则删除 Actions 记录会报 403
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: 🚀 Run IPTV Update
+        run: python -u main.py
+
+      - name: 💾 Commit & Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "__pycache__/" > .gitignore
+          echo "*.pyc" >> .gitignore
+          git add -A
+          git diff --staged --quiet || git commit -m "🔄 Auto update $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+
+      - name: 🧹 Cleanup Old Commits (Keep Latest 5)
+        run: |
+          echo "🗑️  开始清理旧提交，仅保留最新 5 条..."
+          TOTAL=$(git rev-list --count HEAD)
+          if [ "$TOTAL" -le 5 ]; then
+            echo "ℹ️  当前共 $TOTAL 条提交，无需清理"
+            exit 0
+          fi
+          NEW_ROOT=$(git rev-list HEAD --skip=4 -n 1)
+          echo "✂️  将 $NEW_ROOT 设为新的根提交..."
+          FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --parent-filter \
+            "test \$GIT_COMMIT = $NEW_ROOT && echo '' || cat" --tag-name-filter cat -- --all
+          git push --force origin HEAD:main
+          rm -rf .git/refs/original/
+          git reflog expire --expire=now --all
+          git gc --prune=now --aggressive
+          echo "✅ 清理完成，仓库现在精确保留最新 5 条提交"
+
+      - name: 🗑️ Clean old Actions runs (keep latest 5)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Fetching workflow runs..."
+          RUNS=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }}" \
+            --limit 100 \
+            --json databaseId \
+            --jq '.[5:] | .[].databaseId')
+          
+          if [ -z "$RUNS" ]; then
+            echo "✅ No old runs to delete (≤5 runs exist)"
+          else
+            COUNT=$(echo "$RUNS" | wc -l)
+            echo "🗑️ Deleting $COUNT old workflow runs..."
+            echo "$RUNS" | xargs -I{} -P4 \
+              gh api repos/${{ github.repository }}/actions/runs/{} -X DELETE
+            echo "✅ Deleted $COUNT old Actions runs"
+          fi
