@@ -9,7 +9,7 @@ https://gh-proxy.org/https://raw.githubusercontent.com/jn950/live/main/tv/holive
 # [DEAD] https://gh-proxy.org/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt
 # [DEAD] https://gh-proxy.com/raw.githubusercontent.com/SarinV/My-TV/main/my_tv.m3u
 https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.txt
-https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
+# [DEAD] https://raw.githubusercontent.com/yyyr-otz/iptv-api/refs/heads/master/output/user_result.txt
 # [DEAD] http://202.140.142.145:40207/zhibo/iptv.txt
 https://live.hacks.tools/tv/iptv4.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
