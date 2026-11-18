@@ -15,7 +15,7 @@ https://live.hacks.tools/tv/iptv4.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/fingersc/iptv-api/master/output/user_result.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/mike1996/iptv-api/refs/heads/master/output/result.txt
 https://gh-proxy.org/https://raw.githubusercontent.com/gz8482552/itv/refs/heads/master/output/result.txt
-https://gh-proxy.org/https://raw.githubusercontent.com/jia070310/lemonTV/main/iptv-fe.m3u
+# [DEAD] https://gh-proxy.org/https://raw.githubusercontent.com/jia070310/lemonTV/main/iptv-fe.m3u
 https://raw.githubusercontent.com/cyh92/live/main/source/webtv.txt
 https://raw.githubusercontent.com/alantang1977/iptv-auto/refs/heads/main/my.txt
 https://cnb.cool/fgvss/zbds/-/git/raw/main/zbtvupan.txt
